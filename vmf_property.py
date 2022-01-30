@@ -63,14 +63,19 @@ class VMFProperty:
         '''
         self.name = new_name
     
-    def matches(self, name : str, value : str = None) -> bool:
+    def matches(self, name : str, value : str = None, case_sensitive_name : bool = True) -> bool:
         '''
         Checks if this property matches the given name and value.
         :param name: The name to check
         :type name: str
         :param value: The value to check, defaults to None. If None is selected, will return if the name matches.
         :type value: str, optional
+        :param case_sensitive_name: Whether or not the name should be case sensitive, defaults to True.
+        :type case_sensitive_name: bool, optional
         :return: if this property matches the given name and value
         :rtype: bool
         '''
-        return self.name == name and (self.value == value or value is None)
+        if (case_sensitive_name) {
+            return self.name == name and (self.value == value or value is None)
+        }
+        return self.name.lower() == name.lower() and (self.value == value or value is None)

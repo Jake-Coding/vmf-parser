@@ -109,8 +109,8 @@ class VMF(ve.VMFElement):
 
             elif entity.first_layer_has("classname", "logic_timer"):
                 connections : ve.VMFElement = entity.get_subprops_by_name("connections")[0]
-                if (connections and connections.first_layer_has("OnTimer")):
-                    for timer in connections.get_subprops_by_name("OnTimer"):
+                if (connections and connections.first_layer_has("OnTimer", None, False)):
+                    for timer in connections.get_subprops_by_name("OnTimer", None, False):
                         if "health" in timer.get_value().lower():
                             connections.delete_prop(timer.get_name(), timer.get_value()) # remove health tick regen
                     if len(connections.get_props()) == 0: # if the logic timer has no more properties, remove it
@@ -118,8 +118,8 @@ class VMF(ve.VMFElement):
             
             elif entity.first_layer_has("classname", "trigger_multiple"):
                 connections : ve.VMFElement = entity.get_subprops_by_name("connections")[0]
-                if (connections and connections.first_layer_has("OnStartTouch")):
-                    for trigger in connections.get_subprops_by_name("OnStartTouch"):
+                if (connections and connections.first_layer_has("OnStartTouch", None, False)):
+                    for trigger in connections.get_subprops_by_name("OnStartTouch", None, False):
                         if "health" in trigger.get_value().lower():
                             connections.delete_prop(trigger.get_name(), trigger.get_value()) # remove trigger_multiple health 900 regen
                     if len(connections.get_props()) == 0: # if the trigger_multiple has no more properties, remove it
@@ -127,14 +127,14 @@ class VMF(ve.VMFElement):
 
             elif entity.first_layer_has("classname", "func_button"):
                 connections : ve.VMFElement = entity.get_subprops_by_name("connections")[0]
-                if not connections.first_layer_has("OnDamaged"): # if the button doesn't trigger onDamaged
-                    for on_press in connections.get_subprops_by_name("OnPressed"):
+                if not connections.first_layer_has("OnDamaged", None, False): # if the button doesn't trigger onDamaged
+                    for on_press in connections.get_subprops_by_name("OnPressed", None, False):
                         on_press.rename("OnDamaged") # rename all OnPressed to OnDamaged
             
             elif entity.first_layer_has("classname", "trigger_catapult"):
                 if not entity.first_layer_has("launchtarget"):
-                    direction : vp.VMFProperty = entity.get_subprops_by_name("launchDirection")[0]
-                    playerspeed : vp.VMFProperty = entity.get_subprops_by_name("playerSpeed")[0]
+                    direction : vp.VMFProperty = entity.get_subprops_by_name("launchDirection", False)[0]
+                    playerspeed : vp.VMFProperty = entity.get_subprops_by_name("playerSpeed", False)[0]
                     direction = direction.get_value()
                     direction = [int(d) for d in direction.split(" ")]
                     if (direction[0] % 360 == 0 and direction[1] % 360 == 90 and direction[2] % 360 == 0):
