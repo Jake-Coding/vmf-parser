@@ -94,10 +94,12 @@ class VMF(ve.VMFElement):
         Converts the VMF to a hopefully working momentum map.
         Steps taken: 
         1. Remove all regen triggers
-        1a. Remove logic_timer based regen
-        1b. Remove trigger_multiple based regen
-        2. Change the flag for all buttons to trigger onDamaged
-        3. For all catapults without a launch target, multiply their velocity by 1.5. If they have 0 playerSpeed, remove it instead.
+        1a. Remove func_regenerate
+        1b. Remove trigger_hurt
+        1c. Remove logic_timer based regen
+        1d. Remove trigger_multiple based regen
+        2. Change the flag for all buttons with OnPressed and not OnDamaged to instead trigger OnDamaged
+        3. For all catapults without a launch target pointing straight up, multiply their velocity by 1.5. If any catapult has 0 playerSpeed, remove it instead
         
         '''
         for entity in self.elements["entities"]:
