@@ -94,7 +94,8 @@ class VMF(ve.VMFElement):
         Converts the VMF to a hopefully working momentum map.
         Steps taken: 
         1. Remove all regen triggers
-        1a. (TODO) Remove logic_timer based regen
+        1a. Remove logic_timer based regen
+        1b. Remove trigger_multiple based regen
         2. Change the flag for all buttons to trigger onDamaged
         3. For all catapults without a launch target, multiply their velocity by 1.5. If they have 0 playerSpeed, remove it instead.
         
@@ -114,6 +115,15 @@ class VMF(ve.VMFElement):
                             connections.delete_prop(timer.get_name(), timer.get_value()) # remove health tick regen
                     if len(connections.get_props()) == 0: # if the logic timer has no more properties, remove it
                         self.elements["entities"].remove(entity) 
+            
+            elif entity.first_layer_has("classname", "trigger_multiple"):
+                connections : ve.VMFElement = entity.get_subprops_by_name("connections")[0]
+                if (connections and connections.first_layer_has("OnStartTouch")):
+                    for trigger in connections.get_subprops_by_name("OnStartTouch"):
+                        if "health" in trigger.get_value().lower():
+                            connections.delete_prop(trigger.get_name(), trigger.get_value()) # remove trigger_multiple health 900 regen
+                    if len(connections.get_props()) == 0: # if the trigger_multiple has no more properties, remove it
+                        self.elements["entities"].remove(entity)
 
             elif entity.first_layer_has("classname", "func_button"):
                 connections : ve.VMFElement = entity.get_subprops_by_name("connections")[0]
