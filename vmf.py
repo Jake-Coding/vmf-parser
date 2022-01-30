@@ -112,8 +112,10 @@ class VMF(ve.VMFElement):
             
             elif entity.first_layer_has("classname", "trigger_catapult"):
                 if not entity.first_layer_has("launchtarget"):
-                    playerspeed = entity.get_subprops_by_name("playerSpeed")[0]
-                    playerspeed.set_value(str(float(playerspeed.get_value()) * 1.5)) # multiply the velocity by 1.5
+                    direction : vp.VMFProperty = entity.get_subprops_by_name("launchDirection")[0]
+                    playerspeed : vp.VMFProperty = entity.get_subprops_by_name("playerSpeed")[0]
+                    if direction.get_value() == "0 0 0":
+                        playerspeed.set_value(str(float(playerspeed.get_value()) * 1.5)) # multiply the velocity by 1.5
                     if float(playerspeed.value) == 0:
                         self.elements["entities"].remove(entity) # remove this
                         continue
