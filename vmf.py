@@ -95,10 +95,13 @@ class VMF(ve.VMFElement):
         Steps taken: 
         1. Remove all regen triggers
         2. Change the flag for all buttons to trigger onDamaged
-        3. For all catapults without a launch target, multiply their velocity by 1.5
+        3. For all catapults without a launch target, multiply their velocity by 1.5. If they have 0 playerSpeed, remove it instead.
         '''
         for entity in self.elements["entities"]:
             if entity.first_layer_has("classname", "func_regenerate"):
+                self.elements["entities"].remove(entity) # remove regen triggers
+
+            elif entity.first_layer_has("classname", "trigger_hurt"):
                 self.elements["entities"].remove(entity) # remove regen triggers
 
             elif entity.first_layer_has("classname", "func_button"):
@@ -111,6 +114,9 @@ class VMF(ve.VMFElement):
                 if not entity.first_layer_has("launchtarget"):
                     playerspeed = entity.get_subprops_by_name("playerSpeed")[0]
                     playerspeed.set_value(str(float(playerspeed.get_value()) * 1.5)) # multiply the velocity by 1.5
+                    if float(playerspeed.value) == 0:
+                        self.elements["entities"].remove(entity) # remove this
+                        continue
         
     def __str__(self) -> str:
         '''
