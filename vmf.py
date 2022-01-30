@@ -138,7 +138,7 @@ class VMF(ve.VMFElement):
                     direction : vp.VMFProperty = entity.get_subprops_by_name("launchDirection", False)[0]
                     playerspeed : vp.VMFProperty = entity.get_subprops_by_name("playerSpeed", False)[0]
                     direction = direction.get_value()
-                    direction = [int(d) for d in direction.split(" ")]
+                    direction = [float(d) for d in direction.split(" ")]
                     if (direction[0] % 360 == 270 and direction[1] % 360 == 0 and direction[2] % 360 == 0):
                         playerspeed.set_value(str(float(playerspeed.get_value()) * 1.5)) # multiply the velocity by 1.5
                     if float(playerspeed.value) == 0:
