@@ -1,7 +1,9 @@
+import vmf as v
 user_in = input("Path to the map (vmf)\n> ")
+
 try:
-    vmf = VMF(user_in)
-catch Exception as e:
+    vmf = v.VMF(user_in)
+except Exception as e:
     print(e)
     exit()
 

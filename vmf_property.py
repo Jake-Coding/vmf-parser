@@ -75,7 +75,6 @@ class VMFProperty:
         :return: if this property matches the given name and value
         :rtype: bool
         '''
-        if (case_sensitive_name) {
+        if (case_sensitive_name):
             return self.name == name and (self.value == value or value is None)
-        }
         return self.name.lower() == name.lower() and (self.value == value or value is None)

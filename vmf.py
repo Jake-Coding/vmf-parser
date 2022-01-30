@@ -112,7 +112,7 @@ class VMF(ve.VMFElement):
             elif entity.first_layer_has("classname", "logic_timer"):
                 connections : ve.VMFElement = entity.get_subprops_by_name("connections")[0]
                 if (connections and connections.first_layer_has("OnTimer", None, False)):
-                    for timer in connections.get_subprops_by_name("OnTimer", None, False):
+                    for timer in connections.get_subprops_by_name("OnTimer", False):
                         if "health" in timer.get_value().lower():
                             connections.delete_prop(timer.get_name(), timer.get_value()) # remove health tick regen
                     if len(connections.get_props()) == 0: # if the logic timer has no more properties, remove it
@@ -121,7 +121,7 @@ class VMF(ve.VMFElement):
             elif entity.first_layer_has("classname", "trigger_multiple"):
                 connections : ve.VMFElement = entity.get_subprops_by_name("connections")[0]
                 if (connections and connections.first_layer_has("OnStartTouch", None, False)):
-                    for trigger in connections.get_subprops_by_name("OnStartTouch", None, False):
+                    for trigger in connections.get_subprops_by_name("OnStartTouch", False):
                         if "health" in trigger.get_value().lower():
                             connections.delete_prop(trigger.get_name(), trigger.get_value()) # remove trigger_multiple health 900 regen
                     if len(connections.get_props()) == 0: # if the trigger_multiple has no more properties, remove it

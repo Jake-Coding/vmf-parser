@@ -191,7 +191,6 @@ class VMFElement:
         :return: if this element matches the given parameters
         :rtype: bool
         '''
-        if (case_sensitive_name) {
+        if (case_sensitive_name):
             return self.name == _name and (_props == None or _props == self.props)
-        }
         return self.name.lower() == _name.lower() and (_props == None or _props == self.props)
