@@ -5,7 +5,8 @@ class VMF(ve.VMFElement):
     '''
     Parses the VMF file and creates the VMFElement objects.
     '''
-    base_elements : set = {"versioninfo", "visgroups", "world", "entity", "hidden", "cameras", "cordon", "viewsettings"}
+    base_elements : list = ["versioninfo", "visgroups", "world", "entity", "hidden", "cameras", "cordon", "viewsettings"]
+
     def __init__(self, vmf_path : str):
         '''
         Initializes the VMF object.
@@ -78,7 +79,7 @@ class VMF(ve.VMFElement):
             if line in VMF.base_elements:
                 if line == "entity":
                     entity, i = self.parse_element(lines, i)
-                    self.elements["entities"].append(entity) # append the entity to the entities somehow who the fuck knows
+                    self.elements["entities"].append(entity) 
                 else:
                     # print(line)
                     # if (line == "visgroups"):
@@ -102,12 +103,18 @@ class VMF(ve.VMFElement):
         3. For all catapults without a launch target pointing straight up, multiply their velocity by 1.5. If any catapult has 0 playerSpeed, remove it instead
         
         '''
-        for entity in self.elements["entities"]:
+
+        i : int = 0
+        while (i < len(self.elements["entities"])):
+            entity = self.elements["entities"][i]
+
             if entity.first_layer_has("classname", "func_regenerate"):
                 self.elements["entities"].remove(entity) # remove regen triggers
+                continue
 
             elif entity.first_layer_has("classname", "trigger_hurt"):
                 self.elements["entities"].remove(entity) # remove regen triggers
+                continue
 
             elif entity.first_layer_has("classname", "logic_timer"):
                 connections : ve.VMFElement = entity.get_subprops_by_name("connections")[0]
@@ -117,6 +124,7 @@ class VMF(ve.VMFElement):
                             connections.delete_prop(timer.get_name(), timer.get_value()) # remove health tick regen
                     if len(connections.get_props()) == 0: # if the logic timer has no more properties, remove it
                         self.elements["entities"].remove(entity) 
+                        continue
             
             elif entity.first_layer_has("classname", "trigger_multiple"):
                 connections : ve.VMFElement = entity.get_subprops_by_name("connections")[0]
@@ -126,6 +134,7 @@ class VMF(ve.VMFElement):
                             connections.delete_prop(trigger.get_name(), trigger.get_value()) # remove trigger_multiple health 900 regen
                     if len(connections.get_props()) == 0: # if the trigger_multiple has no more properties, remove it
                         self.elements["entities"].remove(entity)
+                        continue
 
             elif entity.first_layer_has("classname", "func_button"):
                 connections : ve.VMFElement = entity.get_subprops_by_name("connections")[0]
@@ -134,16 +143,18 @@ class VMF(ve.VMFElement):
                         on_press.rename("OnDamaged") # rename all OnPressed to OnDamaged
             
             elif entity.first_layer_has("classname", "trigger_catapult"):
+                direction : vp.VMFProperty = entity.get_subprops_by_name("launchDirection", False)[0]
+                playerspeed : vp.VMFProperty = entity.get_subprops_by_name("playerspeed", False)[0]
                 if not entity.first_layer_has("launchtarget"):
-                    direction : vp.VMFProperty = entity.get_subprops_by_name("launchDirection", False)[0]
-                    playerspeed : vp.VMFProperty = entity.get_subprops_by_name("playerSpeed", False)[0]
                     direction = direction.get_value()
                     direction = [float(d) for d in direction.split(" ")]
                     if (direction[0] % 360 == 270 and direction[1] % 360 == 0 and direction[2] % 360 == 0):
                         playerspeed.set_value(str(float(playerspeed.get_value()) * 1.5)) # multiply the velocity by 1.5
-                    if float(playerspeed.value) == 0:
-                        self.elements["entities"].remove(entity) # remove this
-                        continue
+                # print(playerspeed) 
+                if float(playerspeed.get_value()) == 0:
+                    self.elements["entities"].remove(entity) # remove this
+                    continue
+            i += 1
             
         
     def __str__(self) -> str:
@@ -153,12 +164,13 @@ class VMF(ve.VMFElement):
         :rtype: str
         '''
         _str = ""
-        for key, elem in self.elements.items():
-            if elem is not None and key in self.base_elements:
-                _str += str(elem) + "\n"
-        for entity in self.elements["entities"]:
-            print(entity)
-            _str += str(entity) + "\n"
+        for key in VMF.base_elements:
+            if (key != "entity"):
+                _str += str(self.elements[key]) + "\n" if self.elements[key] is not None else ""
+            else:
+                for entity in self.elements["entities"]:
+                    _str += str(entity) + "\n"
+
         return _str
 
 
