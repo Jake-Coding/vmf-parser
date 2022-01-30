@@ -94,8 +94,10 @@ class VMF(ve.VMFElement):
         Converts the VMF to a hopefully working momentum map.
         Steps taken: 
         1. Remove all regen triggers
+        1a. (TODO) Remove logic_timer based regen
         2. Change the flag for all buttons to trigger onDamaged
         3. For all catapults without a launch target, multiply their velocity by 1.5. If they have 0 playerSpeed, remove it instead.
+        
         '''
         for entity in self.elements["entities"]:
             if entity.first_layer_has("classname", "func_regenerate"):
@@ -103,6 +105,15 @@ class VMF(ve.VMFElement):
 
             elif entity.first_layer_has("classname", "trigger_hurt"):
                 self.elements["entities"].remove(entity) # remove regen triggers
+
+            elif entity.first_layer_has("classname", "logic_timer"):
+                connections : ve.VMFElement = entity.get_subprops_by_name("connections")[0]
+                if (connections and connections.first_layer_has("OnTimer")):
+                    for timer in connections.get_subprops_by_name("OnTimer"):
+                        if "health" in timer.get_value().lower():
+                            connections.delete_prop(timer.get_name(), timer.get_value()) # remove health tick regen
+                    if len(connections.get_props()) == 0: # if the logic timer has no more properties, remove it
+                        self.elements["entities"].remove(entity) 
 
             elif entity.first_layer_has("classname", "func_button"):
                 connections : ve.VMFElement = entity.get_subprops_by_name("connections")[0]
@@ -119,6 +130,7 @@ class VMF(ve.VMFElement):
                     if float(playerspeed.value) == 0:
                         self.elements["entities"].remove(entity) # remove this
                         continue
+            
         
     def __str__(self) -> str:
         '''

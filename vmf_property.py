@@ -44,6 +44,15 @@ class VMFProperty:
         '''
         return self.value
 
+    def get_name(self) -> str:
+        '''
+        get name of this property
+
+        :return: name of this property
+        :rtype: str
+        '''
+        return self.name
+
     def rename(self, new_name : str) -> None:
         '''
         Renames this property.

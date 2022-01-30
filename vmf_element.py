@@ -58,17 +58,19 @@ class VMFElement:
                 func(p)
                 p.for_all(func)
 
-    def delete_prop(self, prop_name : str) -> bool:
+    def delete_prop(self, prop_name : str, prop_value : str = None) -> bool:
         '''
         Deletes a property from the element.
 
         :param prop_name: The name of the property to delete
         :type prop_name: str
+        :param prop_value: The value of the property to delete, defaults to None. If None is selected, will delete the first property with the given name.
+        :type prop_value: str, optional
         :return: if the property was found and deleted
         :rtpye: bool
         '''
         for p in self.props:
-            if type(p) == prop.VMFProperty and p.name == prop_name:
+            if type(p) == prop.VMFProperty and p.matches(prop_name, prop_value):
                 self.props.remove(p)
                 return True
             else:
