@@ -1,4 +1,6 @@
-# VMF Parser
+# ZeroVEL
+
+**Zero**VEL **V**MF **E**diting **L**ibrary
 
 Does what it says on the box. Valve Map Format be like
 
