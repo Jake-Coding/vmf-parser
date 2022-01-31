@@ -1,7 +1,6 @@
 from __future__ import annotations
 import vmf_property as prop
 import typing
-import pprint
 
 class VMFElement:
     '''
@@ -37,16 +36,6 @@ class VMFElement:
             
     def is_empty(self) -> bool:
         return len(self.props) == 0
-
-    def __str__(self) -> str:
-        '''
-        Returns a string representation of the element as it would appear in a .vmf
-        :return: The string representation of the element
-        :rtype: str
-        '''
-        prop_str: str = "\n".join([f"\t{p}" for p in self.props])
-        _str: str = self.name + "\n{\n" + prop_str + "\n}\n"
-        return _str
 
     def for_all(self, func : typing.Callable) -> None:
         '''
@@ -156,6 +145,15 @@ class VMFElement:
         '''
         self.name = new_name
     
+    def get_name(self) -> str:
+        '''
+        Gets the name of this element.
+
+        :return: The name of this element
+        :rtype: str
+        '''
+        return self.name
+
     def get_props(self) -> typing.List[prop.VMFProperty | VMFElement]:
         '''
         Returns a list of all properties of this element.
@@ -195,3 +193,33 @@ class VMFElement:
         if (case_sensitive_name):
             return self.name == _name and (_props == None or _props == self.props)
         return self.name.lower() == _name.lower() and (_props == None or _props == self.props)
+
+    def elem_str_helper(self, prop : VMFElement, indent : int) -> str:
+        '''
+        Another helper for __str__
+
+        :param indent: indentation level
+        :type indent: int
+        :return: String representation of element
+        :rtype: str
+        '''
+        prop_str : str = ""
+        if len(prop.get_props()) > 0:
+            for p in prop.get_props():
+                if type(p) == VMFElement:
+                    prop_str += "\t"*indent + p.get_name() + "\n" + "\t" * indent + "{\n" + p.elem_str_helper(p, indent+1) + "\t" * indent + "}\n"
+                else:
+                    prop_str += "\t"*indent + f"{p}\n"
+
+        
+
+        return prop_str
+
+    def __str__(self) -> str:
+        '''
+        Returns a string representation of the element as it would appear in a .vmf
+        :return: The string representation of the element
+        :rtype: str
+        '''
+        
+        return self.name + "\n{\n" + self.elem_str_helper(self, 1) + "\n}\n"
