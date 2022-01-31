@@ -5,14 +5,14 @@ class VMF(ve.VMFElement):
     '''
     Parses the VMF file and creates the VMFElement objects.
     '''
-    base_elements : list = ["versioninfo", "visgroups", "world", "entity", "hidden", "cameras", "cordon", "viewsettings"]
+    base_elements : list = ["versioninfo", "visgroups", "viewsettings", "world", "entity", "hidden", "cameras", "cordon", "cordons"]
 
     def __init__(self, vmf_path : str):
         '''
         Initializes the VMF object.
         '''
         self.vmf_path = vmf_path
-        self.elements = {"versioninfo": None, "visgroups": None, "viewsettings": None, "world": None, "entities": [], "hidden": None, "cameras": None, "cordon": None}
+        self.elements = {"versioninfo": None, "visgroups": None, "viewsettings": None, "world": None, "entities": [], "hidden": None, "cameras": None, "cordon": None, "cordons": None}
         self.parse()
 
     def parse_property(self, line : str) -> vp.VMFProperty:
@@ -166,7 +166,7 @@ class VMF(ve.VMFElement):
         _str = ""
         for key in VMF.base_elements:
             if (key != "entity"):
-                _str += str(self.elements[key]) + "\n" if self.elements[key] is not None else ""
+                _str += str(self.elements[key]) + "\n" if self.elements[key] is not None else key + "\n{\n}\n"
             else:
                 for entity in self.elements["entities"]:
                     _str += str(entity) + "\n"

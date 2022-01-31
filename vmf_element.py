@@ -1,6 +1,7 @@
 from __future__ import annotations
 import vmf_property as prop
 import typing
+import pprint
 
 class VMFElement:
     '''
