@@ -198,6 +198,8 @@ class VMFElement:
         '''
         Another helper for __str__
 
+        :param prop: The property to print
+        :type prop: VMFElement
         :param indent: indentation level
         :type indent: int
         :return: String representation of element
