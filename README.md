@@ -1,6 +1,6 @@
 # CVPL
 
-CaWU's VMF Parser Library
+CaWU's VMF Parsing Library
 
 Does what it says on the box. Valve Map Format be like
 
