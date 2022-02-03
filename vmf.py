@@ -5,7 +5,14 @@ class VMF(ve.VMFElement):
     '''
     Parses the VMF file and creates the VMFElement objects.
     '''
-    base_elements : list = ["versioninfo", "visgroups", "viewsettings", "world", "entity", "hidden", "cameras", "cordon", "cordons"]
+    base_elements : list[str] = ["versioninfo", "visgroups", "viewsettings", "world", "entity", "hidden", "cameras", "cordon", "cordons"]
+    textures_to_change : dict[str, dict[str, str]] = { # {entity name (lowercase) : {old_texture (UPPERCASE) : new_texture}} make a class? 
+        "trigger_catapult": {"TOOLS/TOOLSTRIGGER" : "TOOLS/TRIGGER_CATAPULT"},
+        "func_nogrenades": {"TOOLS/TOOLSTRIGGER" : "TOOLS/TRIGGER_NOGRENADES"},
+        "trigger_teleport": {"TOOLS/TOOLSTRIGGER" : "TOOLS/TRIGGER_TELEPORT"},
+        
+    }
+
 
     def __init__(self, vmf_path : str):
         '''
@@ -89,6 +96,25 @@ class VMF(ve.VMFElement):
             else:
                 # print(line)
                 i += 1
+
+
+    def change_texture_to_momentum(self, entity : ve.VMFElement) -> None:
+        '''
+        Changes the textures of the entity to the correct ones for Momentum.
+        :param entity: The entity to change the textures of
+        :type entity: ve.VMFElement
+        :return: None
+        :rtype: None
+        '''
+        if entity.first_layer_has("solid") and (ent_type := entity.get_subprops_by_name("classname")[0].get_value().lower()) in VMF.textures_to_change:
+            solid : ve.VMFElement = [s for s in entity.get_subprops_by_name("solid") if type(s) == ve.VMFElement][0]
+            for side in solid.get_subprops_by_name("side"):
+                side_mat : vp.VMFProperty = side.get_subprops_by_name("material")[0]
+                # print(side_mat.get_value())
+                if side_mat.get_value().upper() in VMF.textures_to_change[ent_type]:
+                    # print(side_mat.get_value())
+                    side_mat.set_value(VMF.textures_to_change[ent_type][side_mat.get_value()])
+
 
     def tf2_remove_class_attrs(self, class_n : int | str, all_except_one : bool = False) -> None:
         '''
@@ -243,13 +269,14 @@ class VMF(ve.VMFElement):
         '''
         Converts the VMF to a hopefully working momentum map.
         Steps taken: 
-        1. Remove all regen triggers
-        1a. Remove func_regenerate
-        1b. Remove trigger_hurt
-        1c. Remove logic_timer based regen
-        1d. Remove trigger_multiple based regen
-        2. Change the flag for all buttons with OnPressed and not OnDamaged to instead trigger OnDamaged
-        3. For all catapults without a launch target pointing straight up, multiply their velocity by 1.5. If any catapult has 0 playerSpeed, remove it instead
+        1. Change tool textures to momentum tool textures, if applicable
+        2. Remove all regen triggers
+        2a. Remove func_regenerate
+        2b. Remove trigger_hurt
+        2c. Remove logic_timer based regen
+        2d. Remove trigger_multiple based regen
+        3. Change the flag for all buttons with OnPressed and not OnDamaged to instead trigger OnDamaged
+        4. For all catapults without a launch target pointing straight up, multiply their velocity by 1.5. If any catapult has 0 playerSpeed, remove it instead
 
         :param for_class_num: The class number of the map to convert to. 2 is soldier, 4 is demo. 
         :type for_class_num: int | str
@@ -262,6 +289,8 @@ class VMF(ve.VMFElement):
         i : int = 0
         while (i < len(self.elements["entities"])):
             entity = self.elements["entities"][i]
+
+            self.change_texture_to_momentum(entity) # change tool textures to momentum tool textures, if applicable
 
             if entity.first_layer_has("classname", "func_regenerate"):
                 self.elements["entities"].remove(entity) # remove regen triggers
