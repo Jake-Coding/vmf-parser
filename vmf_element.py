@@ -36,6 +36,11 @@ class VMFElement:
         return False
 
     def is_empty(self) -> bool:
+        """
+        Does what it says. Is len(properties) == 0
+        :return: None
+        :rtype: None
+        """
         return len(self.properties) == 0
 
     def for_all(self, func: typing.Callable) -> None:
