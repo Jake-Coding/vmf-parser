@@ -90,7 +90,156 @@ class VMF(ve.VMFElement):
                 # print(line)
                 i += 1
 
-    def tf2_to_momentum(self) -> None:
+    def tf2_remove_class_attrs(self, class_n : int | str, all_except_one : bool = False) -> None:
+        '''
+        remove class tf filters and all entities that reference them
+        Steps taken: 
+        1. Remove all class_n only stuff. If all_except_one is True, instead remove all non-class_n stuff.
+        2. filter_multi :))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))) im having a breakdown
+            you can infinitely stack these fuckers, so we'll just do it for the first layer for now :)
+            TODO: make it work for all layers
+
+        :param class_n: The class number to remove. Can also be a string
+        :type class_n: int | str
+        :param all_except_one: If true, all entities except the one with the class number will be removed.
+        :type all_except_one: bool
+        :return: None
+        :rtype: None
+        '''
+        classes = ["scout", "soldier", "pyro", "demoman", "heavy", "engineer", "medic", "sniper", "spy"]
+        if type(class_n) == int:
+            class_n = str(class_n)
+        else:
+            if class_n not in classes:
+                raise ValueError("Invalid class number")
+            else:
+                class_n = classes.index(class_n) + 1
+
+        # first loop to remove all filter_tf_class entities
+        class_only_trigger_names : list[str]= [] 
+        i : int = 0
+        while (i < len(self.elements["entities"])):
+            entity = self.elements["entities"][i]
+            if entity.first_layer_has("classname", "filter_tf_class") and entity.first_layer_has("targetname", None, False):
+                if not all_except_one:
+                    name = entity.get_subprops_by_name("targetname", False)[0].get_value()
+                    if entity.first_layer_has("tfclass", f"{class_n}"): # 4 is demo. 2 is solly.
+                        if not entity.first_layer_has("Negated", "1"):
+                            class_only_trigger_names.append(name)
+                            self.elements["entities"].remove(entity)
+                            continue
+                else:
+                    if entity.first_layer_has("tfclass"):
+                        name = entity.get_subprops_by_name("targetname", False)[0].get_value()
+                        if not entity.first_layer_has("tfclass", f"{class_n}"): # 4 is demo. 2 is solly.
+                            if not entity.first_layer_has("negated", "1"):
+                                class_only_trigger_names.append(name)
+                                self.elements["entities"].remove(entity)
+                                continue
+
+            i += 1
+
+        # second loop to remove all entities that reference the filter_tf_class entities. Including the first layer of filter_multi
+
+        names_to_remove : list[str] = [] # if a filter_multi is deleted, we need to remove all references to it. because of course we do
+        i = 0
+        while (i < len(self.elements["entities"])):
+            entity = self.elements["entities"][i]
+            if entity.first_layer_has("filtername"):
+                if (entity.get_subprops_by_name("filtername")[0].get_value() in class_only_trigger_names):
+                    self.elements["entities"].remove(entity)
+                    continue
+            if entity.first_layer_has("classname", "filter_multi"):
+                and_flag = False
+                if entity.get_subprops_by_name("filtertype")[0].get_value() == "0":
+                    and_flag = True
+
+                for num in range(10):
+                    if (entity.first_layer_has(f"Filter{num + 1}")):
+                        if entity.get_subprops_by_name(f"Filter{num + 1}")[0].get_value() in class_only_trigger_names:
+                            if and_flag:
+                                filter_multi_name = str(entity)
+                                names_to_remove.append(filter_multi_name) # add it to da list!!!
+
+                                self.elements["entities"].remove(entity)
+                                break
+                            else:
+                                entity.delete_prop(f"Filter{num + 1}")
+                if not and_flag:
+                    if not any([entity.first_layer_has(f"Filter{num + 1}") for num in range(10)]):
+                        filter_multi_name = entity.get_subprops_by_name("targetname")[0].get_value()
+                        self.elements["entities"].remove(entity)
+                        continue
+                                
+            i += 1
+        
+        # third loop to remove all entities that have a filtername of a deleted filter_multi entity
+        i = 0
+        while (i < len(self.elements["entities"])):
+            entity = self.elements["entities"][i]
+            if entity.first_layer_has("filtername"):
+                if (entity.get_subprops_by_name("filtername")[0].get_value() in names_to_remove):
+                    self.elements["entities"].remove(entity)
+                    continue
+            i += 1
+    
+    def tf2_simplify_class_attrs(self, class_n : int | str) -> None:
+        '''
+        remove tf_filter_class for the given class, and remove the filtername attribute from all entities. 
+        TODO: make work for filter_multi rescursively
+
+        :param class_n: The class number to remove. Can also be a string
+        :type class_n: int | str
+        :return: None
+        :rtype: None
+        '''
+        classes = ["scout", "soldier", "pyro", "demoman", "heavy", "engineer", "medic", "sniper", "spy"]
+        if type(class_n) == int:
+            class_n = str(class_n)
+        else:
+            class_n = class_n.lower()
+            if class_n not in classes:
+                raise ValueError("Invalid class number")
+            else:
+                class_n = classes.index(class_n) + 1
+        
+        filter_entities_names : list[str] = []
+        # first loop to remove all filter_tf_class entities for that class
+        i : int = 0
+        while (i < len(self.elements["entities"])):
+            entity = self.elements["entities"][i]
+            if entity.first_layer_has("classname", "filter_tf_class"):
+                # if entity.first_layer_has("tfclass", f"{class_n}") and entity.first_layer_has("negated", "0"): # not negated. 
+                filter_entities_names.append(entity.get_subprops_by_name("targetname", False)[0].get_value())
+                self.elements["entities"].remove(entity)
+                continue
+
+            i += 1
+        
+
+        # second loop to remove all filternames that reference the filter_tf_class entities
+        i = 0
+        while (i < len(self.elements["entities"])):
+            entity = self.elements["entities"][i]
+            if entity.first_layer_has("filtername"):
+                if entity.get_subprops_by_name("filtername")[0].get_value() in filter_entities_names:
+                    # print(entity.get_subprops_by_name("filtername")[0].get_value()) 
+                    entity.delete_prop("filtername") 
+
+            if entity.first_layer_has("classname", "filter_multi"):
+                for num in range(10):
+                    if (entity.first_layer_has(f"Filter{str(num + 1).zfill(2)}")):
+                        if entity.get_subprops_by_name(f"Filter{str(num + 1).zfill(2)}")[0].get_value() in filter_entities_names:
+                            entity.delete_prop(f"Filter{str(num + 1).zfill(2)}")
+
+                if not any([entity.first_layer_has(f"Filter{str(num + 1).zfill(2)}") for num in range(10)]):
+                    self.elements["entities"].remove(entity)
+                    continue
+
+            i += 1
+        
+
+    def tf2_to_momentum(self, for_class_num : int | str) -> None:
         '''
         Converts the VMF to a hopefully working momentum map.
         Steps taken: 
@@ -101,6 +250,12 @@ class VMF(ve.VMFElement):
         1d. Remove trigger_multiple based regen
         2. Change the flag for all buttons with OnPressed and not OnDamaged to instead trigger OnDamaged
         3. For all catapults without a launch target pointing straight up, multiply their velocity by 1.5. If any catapult has 0 playerSpeed, remove it instead
+
+        :param for_class_num: The class number of the map to convert to. 2 is soldier, 4 is demo. 
+        :type for_class_num: int | str
+        :return: None
+        :rtype: None
+
         
         '''
 
@@ -155,7 +310,14 @@ class VMF(ve.VMFElement):
                     self.elements["entities"].remove(entity) # remove this
                     continue
             i += 1
+
             
+        self.tf2_remove_class_attrs(for_class_num, True) # remove all other-class-specific attributes
+        self.tf2_simplify_class_attrs(for_class_num) # remove all filters for this class, and all filternames for this class
+
+
+
+
         
     def __str__(self) -> str:
         '''

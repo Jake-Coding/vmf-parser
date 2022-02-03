@@ -14,7 +14,7 @@ class VMFElement:
         self.name = name
         self.props = props
 
-    def first_layer_has(self, prop_name : str, prop_value : str = None, case_sensitive_name : bool = True) -> bool:
+    def first_layer_has(self, prop_name : str, prop_value : str = None, case_sensitive_name : bool = False) -> bool:
         '''
         Check if the element contains a property with the given name and (optional) given value. No sub-elements are checked.
 
@@ -24,7 +24,7 @@ class VMFElement:
         :type prop_name: str
         :param prop_value: The value of the property, defaults to None. If None is selected, will only check if the property exists.
         :type prop_value: str, optional
-        :param case_sensitive_name: Whether the name of the property should be case sensitive, defaults to True.
+        :param case_sensitive_name: Whether the name of the property should be case sensitive, defaults to False.
         :type case_sensitive_name: bool, optional
         :return: if the property was found
         :rtype: bool
@@ -50,7 +50,7 @@ class VMFElement:
                 func(p)
                 p.for_all(func)
 
-    def delete_prop(self, prop_name : str, prop_value : str = None, case_sensitive_name : bool = True) -> bool:
+    def delete_prop(self, prop_name : str, prop_value : str = None, case_sensitive_name : bool = False) -> bool:
         '''
         Deletes a property from the element.
 
@@ -58,27 +58,28 @@ class VMFElement:
         :type prop_name: str
         :param prop_value: The value of the property to delete, defaults to None. If None is selected, will delete the first property with the given name.
         :type prop_value: str, optional
-        :param case_sensitive_name: Whether the name of the property should be case sensitive, defaults to True.
+        :param case_sensitive_name: Whether the name of the property should be case sensitive, defaults to False.
         :type case_sensitive_name: bool, optional
         :return: if the property was found and deleted
         :rtpye: bool
         '''
         for p in self.props:
-            if type(p) == prop.VMFProperty and p.matches(prop_name, prop_value, case_sensitive_name):
-                self.props.remove(p)
-                return True
+            if type(p) == prop.VMFProperty:
+                if p.matches(prop_name, prop_value, case_sensitive_name):
+                    self.props.remove(p)
+                    return True
             else:
                 p.delete_prop(prop_name)
         return False
     
-    def modify_prop_value(self, prop_name : str, new_value : str, case_sensitive_name : bool = True) -> bool:
+    def modify_prop_value(self, prop_name : str, new_value : str, case_sensitive_name : bool = False) -> bool:
         '''
         Modifies the value of a property.
         :param prop_name: The name of the property to modify
         :type prop_name: str
         :param new_value: The new value of the property
         :type new_value: str
-        :param case_sensitive_name: Whether the name of the property should be case sensitive, defaults to True.
+        :param case_sensitive_name: Whether the name of the property should be case sensitive, defaults to False.
         :type case_sensitive_name: bool, optional
         :return: if the property was found and modified
         :rtype: bool
@@ -91,14 +92,14 @@ class VMFElement:
                 p.modify_prop_value(prop_name, new_value)
         return False
 
-    def modify_prop_name(self, prop_name : str, new_name : str, case_sensitive_name : bool = True) -> bool:
+    def modify_prop_name(self, prop_name : str, new_name : str, case_sensitive_name : bool = False) -> bool:
         '''
         Modifies the name of a property.
         :param prop_name: The name of the property to modify
         :type prop_name: str
         :param new_name: The new name of the property
         :type new_name: str
-        :param case_sensitive_name: Whether the name of the property should be case sensitive, defaults to True.
+        :param case_sensitive_name: Whether the name of the property should be case sensitive, defaults to False.
         :type case_sensitive_name: bool, optional
         :return: if the name was found and modified
         :rtype: bool
@@ -162,7 +163,16 @@ class VMFElement:
         '''
         return self.props 
     
-    def get_subprops_by_name(self, name : str, case_sensitive_name : bool = True) -> typing.List[prop.VMFProperty | VMFElement]:
+    def get_subprops_by_name(self, name : str, case_sensitive_name : bool = False) -> typing.List[prop.VMFProperty | VMFElement]:
+        '''
+        Returns a list of all properties with the given name.
+        :param name: The name of the properties to return
+        :type name: str
+        :param case_sensitive_name: Whether the name of the property should be case sensitive, defaults to False.
+        :type case_sensitive_name: bool, optional
+        :return: A list of all properties with the given name
+        :rtype: list
+        '''
         matching_props = []
         for p in self.props:
             if p.matches(name, None, case_sensitive_name):
@@ -179,13 +189,13 @@ class VMFElement:
         '''
         self.props = props
     
-    def matches(self, _name : str, _props : typing.List[prop.VMFProperty | VMFElement] = None, case_sensitive_name : bool = True) -> bool:
+    def matches(self, _name : str, _props : typing.List[prop.VMFProperty | VMFElement] = None, case_sensitive_name : bool = False) -> bool:
         '''
         :param _name: The name to check
         :type _name: str
         :param _props: The properties to check
         :type _props: list
-        :param case_sensitive_name: Whether the name should be case sensitive, defaults to True.
+        :param case_sensitive_name: Whether the name should be case sensitive, defaults to False.
         :type case_sensitive_name: bool, optional
         :return: if this element matches the given parameters
         :rtype: bool
