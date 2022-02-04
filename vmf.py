@@ -166,7 +166,7 @@ class VMF(ve.VMFElement):
                 if not all_except_one:
                     name = entity.get_subproperties_by_name("targetname")[0].get_value()
                     if entity.first_layer_has("tfclass", f"{class_n}"):  # 4 is demo. 2 is solly.
-                        if entity.first_layer_has("Negated", "0"): # not negated
+                        if entity.first_layer_has("Negated", "0"):  # not negated
                             class_only_trigger_names.append(name)
                             self.elements["entities"].remove(entity)
                             continue
@@ -175,6 +175,12 @@ class VMF(ve.VMFElement):
                         name = entity.get_subproperties_by_name("targetname", False)[0].get_value()
                         if not entity.first_layer_has("tfclass", f"{class_n}"):  # 4 is demo. 2 is solly.
                             if entity.first_layer_has("negated", "0"):
+                                class_only_trigger_names.append(name)
+                                # print(name)
+                                self.elements["entities"].remove(entity)
+                                continue
+                        elif entity.first_layer_has("tfclass", f"{class_n}"):
+                            if entity.first_layer_has("negated", "1"):
                                 class_only_trigger_names.append(name)
                                 self.elements["entities"].remove(entity)
                                 continue
@@ -192,18 +198,22 @@ class VMF(ve.VMFElement):
                     self.elements["entities"].remove(entity)
                     continue
             if entity.first_layer_has("classname", "filter_multi"):
+                deleted_flag: bool = False
                 and_flag = False  # filter_multi can have AND (0) or OR (1) as an operator.
                 if entity.get_subproperties_by_name("filtertype")[0].get_value() == "0":
                     and_flag = True
 
                 for num in range(10):
                     filter_str: str = f"Filter{str(num + 1).zfill(2)}"  # Filter01, Filter02... Filter10
+                    # print(filter_str)
                     if entity.first_layer_has(filter_str):
+                        # print(entity.get_subproperties_by_name(filter_str)[0].get_value())
                         if entity.get_subproperties_by_name(filter_str)[0].get_value() in class_only_trigger_names:
                             if and_flag:  # delete any AND filter_multi with a non-this-class filter
-                                filter_multi_name = str(entity)
+                                filter_multi_name = str(entity.get_subproperties_by_name("targetname")[0].get_value())
                                 names_to_remove.append(filter_multi_name)
                                 self.elements["entities"].remove(entity)
+                                deleted_flag = True
                                 break
                             else:  # for OR filter_multi, just delete the filter that references class
                                 entity.delete_property(filter_str)
@@ -211,14 +221,17 @@ class VMF(ve.VMFElement):
                     if not any([entity.first_layer_has(f"Filter{str(num + 1).zfill(2)}") for num in range(10)]):
                         self.elements["entities"].remove(entity)
                         continue
+                if deleted_flag:
+                    continue
             i += 1
 
-        # third loop to remove all entities that have a filtername of a deleted AND filter_multi entity
+        # third loop to remove all entities that have a filtername of a deleted AND filter_multi entity.
         i = 0
         while i < len(self.elements["entities"]):
             entity = self.elements["entities"][i]
             if entity.first_layer_has("filtername"):
                 if entity.get_subproperties_by_name("filtername")[0].get_value() in names_to_remove:
+                    # print("deleting entity with filter " + entity.get_subproperties_by_name("filtername")[0].get_value())
                     self.elements["entities"].remove(entity)
                     continue
             i += 1
