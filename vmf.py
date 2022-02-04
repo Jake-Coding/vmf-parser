@@ -125,11 +125,12 @@ class VMF(ve.VMFElement):
         if entity.first_layer_has("solid"):
             ent_type: str = entity.get_subproperties_by_name("classname")[0].get_value().lower()
             if ent_type in VMF.textures_to_change:
-                solid: ve.VMFElement = [s for s in entity.get_subproperties_by_name("solid") if type(s) == ve.VMFElement][0]
-                for side in solid.get_subproperties_by_name("side"):
-                    side_mat: vp.VMFProperty = side.get_subproperties_by_name("material")[0]
-                    if side_mat.get_value().upper() in VMF.textures_to_change[ent_type]:  # uppercase to match VMF
-                        side_mat.set_value(VMF.textures_to_change[ent_type][side_mat.get_value()])
+                solids: list[ve.VMFElement] = [s for s in entity.get_subproperties_by_name("solid") if type(s) == ve.VMFElement]
+                for solid in solids:
+                    for side in solid.get_subproperties_by_name("side"):
+                        side_mat: vp.VMFProperty = side.get_subproperties_by_name("material")[0]
+                        if side_mat.get_value().upper() in VMF.textures_to_change[ent_type]:  # uppercase to match VMF
+                            side_mat.set_value(VMF.textures_to_change[ent_type][side_mat.get_value()])
 
     def tf2_remove_class_attrs(self, class_n: int | str, all_except_one: bool = False) -> None:
         """

@@ -14,9 +14,11 @@ for_class: str = input("What class is this for?\n> ")
 classes = ["scout", "soldier", "pyro", "demoman", "heavy", "engineer", "medic", "sniper", "spy"]
 
 for_class = for_class.lower()
-class_num : int = 0
-if for_class == "demo":
+class_num: int = 0
+if for_class in ["demo", "d"]:
     for_class = "demoman"
+if for_class == ["solly", "s"]:
+    for_class = "soldier"
 
 if for_class not in classes:
     raise ValueError("Invalid class")
@@ -24,7 +26,7 @@ else:
     class_num = classes.index(for_class) + 1
 
 
-print(class_num)
+# print(class_num)
 vmf.tf2_to_momentum(class_num)
 
 out_path = list(os.path.split(user_in))
