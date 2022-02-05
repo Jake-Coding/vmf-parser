@@ -8,13 +8,13 @@ class VMFElement:
     Represents an element of a .vmf file. Contains a name and a list of properties. Properties can be other elements as well.
     :ivar name: The name of the element
     :type name: str
-    :ivar properties: The properties of the element. These can be VMFProperty objects or VMFElement objects.
-    :type properties: list
+    :ivar items: The properties of the element. These can be VMFProperty objects or VMFElement objects.
+    :type items: list
     """
 
-    def __init__(self, name: str, properties: typing.List[property.VMFProperty | VMFElement] = None):
+    def __init__(self, name: str, items: typing.List[property.VMFProperty | VMFElement] = None):
         self.name = name
-        self.properties = properties
+        self.items = items
 
     def first_layer_has(self, property_name: str, property_value: str = None,
                         case_sensitive_name: bool = False) -> bool:
@@ -30,7 +30,7 @@ class VMFElement:
         :return: if the property was found
         :rtype: bool
         """
-        for p in self.properties:
+        for p in self.items:
             if type(p) == property.VMFProperty and p.matches(property_name, property_value, case_sensitive_name):
                 return True
         return False
@@ -41,20 +41,7 @@ class VMFElement:
         :return: None
         :rtype: None
         """
-        return len(self.properties) == 0
-
-    def for_all(self, func: typing.Callable) -> None:
-        """
-        Calls a function recursively on all properties of the element.
-        :param func: The function to call
-        :type func: typing.Callable
-        :return: None
-        :rtype: None
-        """
-        for p in self.properties:
-            if type(p) == VMFElement:
-                func(p)
-                p.for_all(func)
+        return len(self.items) == 0
 
     def delete_property(self, property_name: str, property_value: str = None,
                         case_sensitive_name: bool = False) -> bool:
@@ -70,10 +57,10 @@ class VMFElement:
         :return: if the property was found and deleted
         :rtpye: bool
         """
-        for p in self.properties:
+        for p in self.items:
             if type(p) == property.VMFProperty:
                 if p.matches(property_name, property_value, case_sensitive_name):
-                    self.properties.remove(p)
+                    self.items.remove(p)
                     return True
             else:
                 p.delete_property(property_name)
@@ -91,7 +78,7 @@ class VMFElement:
         :return: if the property was found and modified
         :rtype: bool
         """
-        for p in self.properties:
+        for p in self.items:
             if (type(p) == property.VMFProperty) and (p.matches(property_name, None, case_sensitive_name)):
                 p.set_value(new_value)
                 return True
@@ -111,7 +98,7 @@ class VMFElement:
         :return: if the name was found and modified
         :rtype: bool
         """
-        for p in self.properties:
+        for p in self.items:
             if type(p) == property.VMFProperty and (p.matches(property_name, None, case_sensitive_name)):
                 p.rename(new_name)
                 return True
@@ -129,7 +116,7 @@ class VMFElement:
         :return: if the property was added
         :rtype: bool
         """
-        self.properties.append(property.VMFProperty(prop_name, new_value))
+        self.items.append(property.VMFProperty(prop_name, new_value))
         return True
 
     def add_property(self, prop: property.VMFProperty) -> bool:
@@ -140,7 +127,7 @@ class VMFElement:
         :return: if the property was added
         :rtype: bool
         """
-        self.properties.append(prop)
+        self.items.append(prop)
         return True
 
     def rename(self, new_name: str) -> None:
@@ -162,16 +149,16 @@ class VMFElement:
         """
         return self.name
 
-    def get_properties(self) -> typing.List[property.VMFProperty | VMFElement]:
+    def get_items(self) -> typing.List[property.VMFProperty | VMFElement]:
         """
-        Returns a list of all properties of this element.
-        :return: A list of all properties of this element
+        Returns a list of all items of this element.
+        :return: A list of all items of this element
         :rtype: list
         """
-        return self.properties
+        return self.items
 
     def get_subproperties_by_name(self, name: str, case_sensitive_name: bool = False) -> typing.List[
-        property.VMFProperty | VMFElement]:
+        property.VMFProperty]:
         """
         Returns a list of all properties with the given name.
         :param name: The name of the properties to return
@@ -181,61 +168,96 @@ class VMFElement:
         :return: A list of all properties with the given name
         :rtype: list
         """
-        matching_props = []
-        for p in self.properties:
-            if p.matches(name, None, case_sensitive_name):
+        matching_props: list[property.VMFProperty] = []
+        for p in self.items:
+            if type(p) == property.VMFProperty and p.matches(name, None, case_sensitive_name):
                 matching_props.append(p)
         return matching_props
 
-    def set_properties(self, properties: typing.List[property.VMFProperty | VMFElement]) -> None:
+    def get_first_subproperty(self, name: str, case_sensitive_name: bool = False) -> property.VMFProperty:
         """
-        Sets the properties of this element.
-        :param properties: The properties to set
-        :type properties: list
+        Returns first subproperty if it exists. Otherwise None
+        :param name: Name of the property to return
+        :type name: str
+        :param case_sensitive_name: Whether the name of the property should be case sensitive, defaults to False.
+        :type case_sensitive_name: bool, optional
+        :return: The first property with the given name
+        :rtype: list
+        """
+        if len(properties := self.get_subproperties_by_name(name, case_sensitive_name)) != 0:
+            return properties[0]
+        return None
+
+    def get_subelements_by_name(self, name: str, case_sensitive_name: bool = False) -> typing.List[VMFElement]:
+        """
+        Returns a list of all elements with the given name
+        :param name: Name of the element to return
+        :type name: str
+        :param case_sensitive_name: Whether the name of the element should be case sensitive, defaults to False.
+        :type case_sensitive_name: bool, optional
+        :return: A list of all elements with the given name
+        :rtype: list
+        """
+        matching_elems: list[VMFElement] = []
+        for e in self.items:
+            if type(e) == VMFElement and e.matches(name, None, case_sensitive_name):
+                matching_elems.append(e)
+        return matching_elems
+
+    def get_first_subelement(self, name: str, case_sensitive_name: bool = False) -> VMFElement:
+        if len(elements := self.get_subelements_by_name(name, case_sensitive_name)) != 0:
+            return elements[0]
+        return None
+
+    def set_items(self, items: typing.List[property.VMFProperty | VMFElement]) -> None:
+        """
+        Sets the items of this element.
+        :param items: The properties to set
+        :type items: list
         :return: None
         :rtype: None
         """
-        self.properties = properties
+        self.items = items
 
-    def matches(self, _name: str, _properties: typing.List[property.VMFProperty | VMFElement] = None,
+    def matches(self, _name: str, _items: typing.List[property.VMFProperty | VMFElement] = None,
                 case_sensitive_name: bool = False) -> bool:
         """
         :param _name: The name to check
         :type _name: str
-        :param _properties: The properties to check
-        :type _properties: list
+        :param _items: The items to check
+        :type _items: list
         :param case_sensitive_name: Whether the name should be case sensitive, defaults to False.
         :type case_sensitive_name: bool, optional
         :return: if this element matches the given parameters
         :rtype: bool
         """
         if case_sensitive_name:
-            return self.name == _name and (_properties is None or _properties == self.properties)
-        return self.name.lower() == _name.lower() and (_properties is None or _properties == self.properties)
+            return self.name == _name and (_items is None or _items == self.items)
+        return self.name.lower() == _name.lower() and (_items is None or _items == self.items)
 
     @staticmethod
-    def elem_str_helper(_property: VMFElement, indent: int) -> str:
+    def _elem_str_helper(_item: VMFElement, indent: int) -> str:
         """
         Another helper for __str__
 
-        :param _property: The property to print
-        :type _property: VMFElement
+        :param _item: The item to print
+        :type _item: VMFElement
         :param indent: indentation level
         :type indent: int
         :return: String representation of element
         :rtype: str
         """
-        property_str: str = ""
-        if len(_property.get_properties()) > 0:
-            for p in _property.get_properties():
+        item_str: str = ""
+        if len(_item.get_items()) > 0:
+            for p in _item.get_items():
                 if type(p) == VMFElement:
-                    property_str += "\t" * indent + p.get_name()
-                    property_str += "\n" + "\t" * indent + "{\n" + p.elem_str_helper(p, indent + 1)
-                    property_str += "\t" * indent + "}\n"
+                    item_str += "\t" * indent + p.get_name()
+                    item_str += "\n" + "\t" * indent + "{\n" + p._elem_str_helper(p, indent + 1)
+                    item_str += "\t" * indent + "}\n"
                 else:
-                    property_str += "\t" * indent + f"{p}\n"
+                    item_str += "\t" * indent + f"{p}\n"
 
-        return property_str
+        return item_str
 
     def __str__(self) -> str:
         """
@@ -244,4 +266,4 @@ class VMFElement:
         :rtype: str
         """
 
-        return self.name + "\n{\n" + VMFElement.elem_str_helper(self, 1) + "\n}\n"
+        return self.name + "\n{\n" + VMFElement._elem_str_helper(self, 1) + "\n}\n"

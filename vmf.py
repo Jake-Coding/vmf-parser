@@ -3,9 +3,9 @@ import vmf_property as vp
 import typing
 
 
-class VMF(ve.VMFElement):
+class VMF:
     """
-    Parses the VMF file and creates the VMFElement objects.
+    Representation of a full VMF file.
     """
     base_elements: list[str] = ["versioninfo", "visgroups", "viewsettings", "world", "entity", "hidden", "cameras",
                                 "cordon", "cordons"]
@@ -18,18 +18,26 @@ class VMF(ve.VMFElement):
 
     }
 
-    def __init__(self, vmf_path: str):  # TODO - add option to be able to not need to load from file
+    def __init__(self, *, vmf_path: str = None, vmf_elements: dict = None):
         """
         Initializes the VMF object.
+        :param vmf_path: the path to a file to parse
+        :type vmf_path: str
+        :param vmf_elements: a pre-existing dict resembling a VMF class
+        :type vmf_elements: dict
         """
-        self.vmf_path = vmf_path
+
         # no VMF should have more than these elements
         self.elements = {"versioninfo": None, "visgroups": None, "viewsettings": None, "world": None, "entities": [],
                          "hidden": None, "cameras": None, "cordon": None, "cordons": None}
-        self.parse()
+
+        if vmf_path is not None:
+            self._parse(vmf_path)
+        else:
+            self.elements = vmf_elements
 
     @staticmethod
-    def parse_property(line: str) -> vp.VMFProperty:
+    def _parse_property(line: str) -> vp.VMFProperty:
         """
         Parses a property line.
         :param line: The line to parse
@@ -42,7 +50,7 @@ class VMF(ve.VMFElement):
         rest_of_data = " ".join(line[1:])
         return vp.VMFProperty(line[0][1:-1], rest_of_data[1:-1])  # slice to ignore the " chars that wrap the property
 
-    def parse_element(self, lines: typing.List[str], current_line: int) -> tuple([ve.VMFElement, int]):
+    def _parse_element(self, lines: typing.List[str], current_line: int) -> tuple[ve.VMFElement, int]:
         """
         Parses a VMF element. Helper function for parse()
         Assumes formatting as:
@@ -77,7 +85,7 @@ class VMF(ve.VMFElement):
             line = line.strip()
 
             if len(line.split(" ")) > 1:  # the only lines with spaces in the middle are properties
-                sub_elements.append(VMF.parse_property(line))
+                sub_elements.append(VMF._parse_property(line))
             else:
                 if line == "{":
                     bracket_count += 1
@@ -86,18 +94,18 @@ class VMF(ve.VMFElement):
                     if bracket_count == 0:
                         break
                 else:
-                    elem, i = self.parse_element(lines, i)
+                    elem, i = self._parse_element(lines, i)
                     sub_elements.append(elem)
             i += 1
         return ve.VMFElement(name, sub_elements), i
 
-    def parse(self) -> None:
+    def _parse(self, vmf_path: str) -> None:
         """
         Parses the VMF file. See parse_element() for assumed formatting.
 
         """
 
-        with open(self.vmf_path, "r") as f:
+        with open(vmf_path, "r") as f:
             lines = f.readlines()
 
         i = 0
@@ -106,10 +114,10 @@ class VMF(ve.VMFElement):
             line = line.strip()
             if line in VMF.base_elements:
                 if line == "entity":
-                    entity, i = self.parse_element(lines, i)
+                    entity, i = self._parse_element(lines, i)
                     self.elements["entities"].append(entity)
                 else:
-                    self.elements[line], i = self.parse_element(lines, i)
+                    self.elements[line], i = self._parse_element(lines, i)
             else:
                 i += 1
 
@@ -123,16 +131,60 @@ class VMF(ve.VMFElement):
         :rtype: None
         """
         if entity.first_layer_has("solid"):
-            ent_type: str = entity.get_subproperties_by_name("classname")[0].get_value().lower()
+            ent_type: str = entity.get_first_subproperty("classname").get_value().lower()
             if ent_type in VMF.textures_to_change:
-                solids: list[ve.VMFElement] = [s for s in entity.get_subproperties_by_name("solid") if type(s) == ve.VMFElement]
+                solids: list[ve.VMFElement] = entity.get_subelements_by_name("solid")
                 for solid in solids:
-                    for side in solid.get_subproperties_by_name("side"):
-                        side_mat: vp.VMFProperty = side.get_subproperties_by_name("material")[0]
+                    for side in solid.get_subelements_by_name("side"):
+                        side_mat: vp.VMFProperty = side.get_first_subproperty("material")
                         if side_mat.get_value().upper() in VMF.textures_to_change[ent_type]:  # uppercase to match VMF
                             side_mat.set_value(VMF.textures_to_change[ent_type][side_mat.get_value()])
 
-    def tf2_remove_class_attrs(self, class_n: int | str, all_except_one: bool = False) -> None:
+    def _tf2_simplify_class_attrs(self) -> None:
+        """
+        remove all tf_filter_class , and remove the filtername attribute from all entities.
+        Probably only use this after tf2_remove_class_attrs
+        TODO: make work for filter_multi recursively
+
+        :return: None
+        :rtype: None
+        """
+
+        filter_entities_names: list[str] = []
+        # first loop to remove all filter_tf_class entities
+        i: int = 0
+        while i < len(self.elements["entities"]):
+            entity = self.elements["entities"][i]
+            if entity.first_layer_has("classname", "filter_tf_class"):
+                filter_entities_names.append(entity.get_first_subproperty("targetname").get_value())
+                self.elements["entities"].remove(entity)
+                continue
+            i += 1
+
+        # second loop to remove all filternames that reference the filter_tf_class entities
+        i = 0
+        while i < len(self.elements["entities"]):
+            entity = self.elements["entities"][i]
+            if entity.first_layer_has("filtername"):
+                # make sure we only remove class filters
+                if entity.get_first_subproperty("filtername").get_value() in filter_entities_names:
+                    entity.delete_property("filtername")
+
+            if entity.first_layer_has("classname", "filter_multi"):
+                for num in range(10):
+                    filter_str: str = f"Filter{str(num + 1).zfill(2)}"
+                    if entity.first_layer_has(filter_str):
+                        if entity.get_first_subproperty(filter_str).get_value() in filter_entities_names:
+                            entity.delete_property(filter_str)
+
+                if not any([entity.first_layer_has(f"Filter{str(num + 1).zfill(2)}") for num in range(10)]):
+                    # delete empty filter_multi
+                    self.elements["entities"].remove(entity)
+                    continue
+
+            i += 1
+
+    def tf2_remove_class_attrs(self, class_n: int, all_except_one: bool = False) -> None:
         """
         remove class tf filters and all entities that reference them
         Steps taken:
@@ -141,31 +193,23 @@ class VMF(ve.VMFElement):
             you can infinitely stack these fuckers, so we'll just do it for the first layer for now :)
             TODO: make it work for all layers
 
-        :param class_n: The class number to remove. Can also be a string like "soldier" or "demoman"
-        :type class_n: int | str
+        :param class_n: The class number to remove. 2 = Soldier, 4 = Demo
+        :type class_n: int
         :param all_except_one: If true, all entities except the one with the class number will be removed.
         :type all_except_one: bool
         :return: None
         :rtype: None
         """
-        # TODO - move the class-number-getter thing to its own function?
-        classes = ["scout", "soldier", "pyro", "demoman", "heavy", "engineer", "medic", "sniper", "spy"]
-        if type(class_n) == int:
-            class_n = str(class_n)
-        else:
-            if class_n not in classes:
-                raise ValueError("Invalid class number")
-            else:
-                class_n = classes.index(class_n) + 1
 
         # first loop to remove all filter_tf_class entities
         class_only_trigger_names: list[str] = []
         i: int = 0
         while i < len(self.elements["entities"]):
             entity: ve.VMFElement = self.elements["entities"][i]
+
             if entity.first_layer_has("classname", "filter_tf_class") and entity.first_layer_has("targetname"):
                 if not all_except_one:
-                    name = entity.get_subproperties_by_name("targetname")[0].get_value()
+                    name = entity.get_first_subproperty("targetname").get_value()
                     if entity.first_layer_has("tfclass", f"{class_n}"):  # 4 is demo. 2 is solly.
                         if entity.first_layer_has("Negated", "0"):  # not negated
                             class_only_trigger_names.append(name)
@@ -173,7 +217,7 @@ class VMF(ve.VMFElement):
                             continue
                 else:
                     if entity.first_layer_has("tfclass"):
-                        name = entity.get_subproperties_by_name("targetname", False)[0].get_value()
+                        name = entity.get_first_subproperty("targetname").get_value()
                         if not entity.first_layer_has("tfclass", f"{class_n}"):  # 4 is demo. 2 is solly.
                             if entity.first_layer_has("negated", "0"):
                                 class_only_trigger_names.append(name)
@@ -195,23 +239,21 @@ class VMF(ve.VMFElement):
         while i < len(self.elements["entities"]):
             entity = self.elements["entities"][i]
             if entity.first_layer_has("filtername"):
-                if entity.get_subproperties_by_name("filtername")[0].get_value() in class_only_trigger_names:
+                if entity.get_first_subproperty("filtername").get_value() in class_only_trigger_names:
                     self.elements["entities"].remove(entity)
                     continue
             if entity.first_layer_has("classname", "filter_multi"):
                 deleted_flag: bool = False
                 and_flag = False  # filter_multi can have AND (0) or OR (1) as an operator.
-                if entity.get_subproperties_by_name("filtertype")[0].get_value() == "0":
+                if entity.get_first_subproperty("filtertype").get_value() == "0":
                     and_flag = True
 
                 for num in range(10):
                     filter_str: str = f"Filter{str(num + 1).zfill(2)}"  # Filter01, Filter02... Filter10
-                    # print(filter_str)
                     if entity.first_layer_has(filter_str):
-                        # print(entity.get_subproperties_by_name(filter_str)[0].get_value())
-                        if entity.get_subproperties_by_name(filter_str)[0].get_value() in class_only_trigger_names:
+                        if entity.get_first_subproperty(filter_str).get_value() in class_only_trigger_names:
                             if and_flag:  # delete any AND filter_multi with a non-this-class filter
-                                filter_multi_name = str(entity.get_subproperties_by_name("targetname")[0].get_value())
+                                filter_multi_name = str(entity.get_first_subproperty("targetname").get_value())
                                 names_to_remove.append(filter_multi_name)
                                 self.elements["entities"].remove(entity)
                                 deleted_flag = True
@@ -231,55 +273,12 @@ class VMF(ve.VMFElement):
         while i < len(self.elements["entities"]):
             entity = self.elements["entities"][i]
             if entity.first_layer_has("filtername"):
-                if entity.get_subproperties_by_name("filtername")[0].get_value() in names_to_remove:
-                    # print("deleting entity with filter " + entity.get_subproperties_by_name("filtername")[0].get_value())
+                if entity.get_first_subproperty("filtername").get_value() in names_to_remove:
                     self.elements["entities"].remove(entity)
                     continue
             i += 1
 
-    def tf2_simplify_class_attrs(self) -> None:
-        """
-        remove all tf_filter_class , and remove the filtername attribute from all entities.
-        Probably only use this after tf2_remove_class_attrs
-        TODO: make work for filter_multi recursively
-
-        :return: None
-        :rtype: None
-        """
-
-        filter_entities_names: list[str] = []
-        # first loop to remove all filter_tf_class entities
-        i: int = 0
-        while i < len(self.elements["entities"]):
-            entity = self.elements["entities"][i]
-            if entity.first_layer_has("classname", "filter_tf_class"):
-                filter_entities_names.append(entity.get_subproperties_by_name("targetname")[0].get_value())
-                self.elements["entities"].remove(entity)
-                continue
-            i += 1
-
-        # second loop to remove all filternames that reference the filter_tf_class entities
-        i = 0
-        while i < len(self.elements["entities"]):
-            entity = self.elements["entities"][i]
-            if entity.first_layer_has("filtername"):
-                # make sure we only remove class filters
-                if entity.get_subproperties_by_name("filtername")[0].get_value() in filter_entities_names:
-                    entity.delete_property("filtername")
-
-            if entity.first_layer_has("classname", "filter_multi"):
-                for num in range(10):
-                    filter_str: str = f"Filter{str(num + 1).zfill(2)}"
-                    if entity.first_layer_has(filter_str):
-                        if entity.get_subproperties_by_name(filter_str)[0].get_value() in filter_entities_names:
-                            entity.delete_property(filter_str)
-
-                if not any([entity.first_layer_has(f"Filter{str(num + 1).zfill(2)}") for num in range(10)]):
-                    # delete empty filter_multi
-                    self.elements["entities"].remove(entity)
-                    continue
-
-            i += 1
+        self._tf2_simplify_class_attrs()
 
     def tf2_to_momentum(self, for_class_num: int | str) -> None:
         """
@@ -306,7 +305,7 @@ class VMF(ve.VMFElement):
 
         i: int = 0
         while i < len(self.elements["entities"]):
-            entity = self.elements["entities"][i]
+            entity: ve.VMFElement = self.elements["entities"][i]
 
             VMF.change_texture_to_momentum(entity)  # change tool textures to momentum tool textures, if applicable
 
@@ -319,19 +318,19 @@ class VMF(ve.VMFElement):
                 continue
 
             elif entity.first_layer_has("classname", "logic_timer"):
-                connections: ve.VMFElement = entity.get_subproperties_by_name("connections")[0]
-                if connections and connections.first_layer_has("OnTimer", None, False):
-                    for timer in connections.get_subproperties_by_name("OnTimer", False):
+                connections: ve.VMFElement = entity.get_first_subelement("connections")
+                if connections and connections.first_layer_has("OnTimer"):
+                    for timer in connections.get_subproperties_by_name("OnTimer"):
                         if "health" in timer.get_value().lower():  # sethealth and addhealth both have health :)
                             connections.delete_property(timer.get_name(), timer.get_value())  # remove health tick regen
-                    if len(connections.get_properties()) == 0:  # if the logic timer has no more properties, remove it
+                    if len(connections.get_items()) == 0:  # if the logic timer has no more properties, remove it
                         self.elements["entities"].remove(entity)
                         continue
 
             elif entity.first_layer_has("classname", "trigger_multiple"):
-                connections: ve.VMFElement = entity.get_subproperties_by_name("connections")[0]
+                connections: ve.VMFElement = entity.get_first_subelement("connections")
                 if connections and connections.first_layer_has("OnStartTouch", None, False):
-                    for trigger in connections.get_subproperties_by_name("OnStartTouch", False):
+                    for trigger in connections.get_subproperties_by_name("OnStartTouch"):
                         if "health" in trigger.get_value().lower():
                             connections.delete_property(trigger.get_name(),
                                                         trigger.get_value())  # remove trigger_multiple health 900 regen
@@ -341,14 +340,14 @@ class VMF(ve.VMFElement):
 
             # TODO- inquire to big mmod if this will need to be changed
             elif entity.first_layer_has("classname", "func_button"):
-                connections: ve.VMFElement = entity.get_subproperties_by_name("connections")[0]
+                connections: ve.VMFElement = entity.get_first_subelement("connections")
                 if not connections.first_layer_has("OnDamaged"):  # if the button doesn't trigger onDamaged
                     for on_press in connections.get_subproperties_by_name("OnPressed"):
                         on_press.rename("OnDamaged")  # rename all OnPressed to OnDamaged
 
             elif entity.first_layer_has("classname", "trigger_catapult"):
-                direction: vp.VMFProperty = entity.get_subproperties_by_name("launchDirection", False)[0]
-                player_speed: vp.VMFProperty = entity.get_subproperties_by_name("playerspeed", False)[0]
+                direction: vp.VMFProperty = entity.get_first_subproperty("launchDirection")
+                player_speed: vp.VMFProperty = entity.get_first_subproperty("playerspeed")
                 if not entity.first_layer_has("launchtarget"):
                     dir_value: str = direction.get_value()
                     dir_values: list[float] = [float(d) for d in dir_value.split(" ")]
@@ -363,7 +362,6 @@ class VMF(ve.VMFElement):
             i += 1
 
         self.tf2_remove_class_attrs(for_class_num, all_except_one=True)  # remove all other-class-specific attributes
-        self.tf2_simplify_class_attrs()  # remove all filters for this class, and all filternames for this class
 
     def __str__(self) -> str:
         """

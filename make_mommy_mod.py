@@ -5,7 +5,7 @@ user_in = input("Path to the map (vmf)\n> ")
 user_in = os.path.abspath(user_in)
 assert os.path.splitext(user_in)[1] == '.vmf'
 try:
-    vmf = v.VMF(user_in)
+    vmf = v.VMF(vmf_path=user_in)
 except Exception as e:
     print(e)
     exit()
