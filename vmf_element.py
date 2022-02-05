@@ -1,29 +1,30 @@
 from __future__ import annotations
-import vmf_property as property
+import vmf_property
 import typing
 
 
 class VMFElement:
     """
-    Represents an element of a .vmf file. Contains a name and a list of properties. Properties can be other elements as well.
+    Represents an element of a .vmf file. Contains a name and a list of properties/elements.
     :ivar name: The name of the element
     :type name: str
-    :ivar items: The properties of the element. These can be VMFProperty objects or VMFElement objects.
+    :ivar items: The parts of the element. These can be VMFProperty objects or VMFElement objects.
     :type items: list
     """
 
-    def __init__(self, name: str, items: typing.List[property.VMFProperty | VMFElement] = None):
+    def __init__(self, name: str, items: typing.List[vmf_property.VMFProperty | VMFElement] = None):
         self.name = name
         self.items = items
 
     def first_layer_has(self, property_name: str, property_value: str = None,
                         case_sensitive_name: bool = False) -> bool:
         """
-        Check if the element contains a property with the given name and (optional) given value. No sub-elements are checked.
+        Check if the element contains a property with the given name and (optional) given value.
+        No sub-elements are checked.
 
         :param property_name: The name of the property to check
         :type property_name: str
-        :param property_value: The value of the property, defaults to None. If None is selected, will only check if the property exists.
+        :param property_value: The value of the property, defaults to None. If None, will only check for existence.
         :type property_value: str, optional
         :param case_sensitive_name: Whether the name of the property should be case sensitive, defaults to False.
         :type case_sensitive_name: bool, optional
@@ -31,15 +32,15 @@ class VMFElement:
         :rtype: bool
         """
         for p in self.items:
-            if type(p) == property.VMFProperty and p.matches(property_name, property_value, case_sensitive_name):
+            if type(p) == vmf_property.VMFProperty and p.matches(property_name, property_value, case_sensitive_name):
                 return True
         return False
 
     def is_empty(self) -> bool:
         """
         Does what it says. Is len(properties) == 0
-        :return: None
-        :rtype: None
+        :return: If this has no items in it
+        :rtype: bool
         """
         return len(self.items) == 0
 
@@ -50,7 +51,7 @@ class VMFElement:
 
         :param property_name: The name of the property to delete
         :type property_name: str
-        :param property_value: The value of the property to delete, defaults to None. If None is selected, will delete the first property with the given name.
+        :param property_value: The value of the property to delete, defaults to None. If None, will delete the first property with the given name.
         :type property_value: str, optional
         :param case_sensitive_name: Whether the name of the property should be case sensitive, defaults to False.
         :type case_sensitive_name: bool, optional
@@ -58,7 +59,7 @@ class VMFElement:
         :rtpye: bool
         """
         for p in self.items:
-            if type(p) == property.VMFProperty:
+            if type(p) == vmf_property.VMFProperty:
                 if p.matches(property_name, property_value, case_sensitive_name):
                     self.items.remove(p)
                     return True
@@ -79,7 +80,7 @@ class VMFElement:
         :rtype: bool
         """
         for p in self.items:
-            if (type(p) == property.VMFProperty) and (p.matches(property_name, None, case_sensitive_name)):
+            if (type(p) == vmf_property.VMFProperty) and (p.matches(property_name, None, case_sensitive_name)):
                 p.set_value(new_value)
                 return True
             else:
@@ -99,7 +100,7 @@ class VMFElement:
         :rtype: bool
         """
         for p in self.items:
-            if type(p) == property.VMFProperty and (p.matches(property_name, None, case_sensitive_name)):
+            if type(p) == vmf_property.VMFProperty and (p.matches(property_name, None, case_sensitive_name)):
                 p.rename(new_name)
                 return True
             else:
@@ -116,10 +117,10 @@ class VMFElement:
         :return: if the property was added
         :rtype: bool
         """
-        self.items.append(property.VMFProperty(prop_name, new_value))
+        self.items.append(vmf_property.VMFProperty(prop_name, new_value))
         return True
 
-    def add_property(self, prop: property.VMFProperty) -> bool:
+    def add_property(self, prop: vmf_property.VMFProperty) -> bool:
         """
         Adds a property to the element.
         :param prop: The property to add
@@ -149,7 +150,7 @@ class VMFElement:
         """
         return self.name
 
-    def get_items(self) -> typing.List[property.VMFProperty | VMFElement]:
+    def get_items(self) -> typing.List[vmf_property.VMFProperty | VMFElement]:
         """
         Returns a list of all items of this element.
         :return: A list of all items of this element
@@ -158,7 +159,7 @@ class VMFElement:
         return self.items
 
     def get_subproperties_by_name(self, name: str, case_sensitive_name: bool = False) -> typing.List[
-        property.VMFProperty]:
+        vmf_property.VMFProperty]:
         """
         Returns a list of all properties with the given name.
         :param name: The name of the properties to return
@@ -168,13 +169,13 @@ class VMFElement:
         :return: A list of all properties with the given name
         :rtype: list
         """
-        matching_props: list[property.VMFProperty] = []
+        matching_props: list[vmf_property.VMFProperty] = []
         for p in self.items:
-            if type(p) == property.VMFProperty and p.matches(name, None, case_sensitive_name):
+            if type(p) == vmf_property.VMFProperty and p.matches(name, None, case_sensitive_name):
                 matching_props.append(p)
         return matching_props
 
-    def get_first_subproperty(self, name: str, case_sensitive_name: bool = False) -> property.VMFProperty:
+    def get_first_subproperty(self, name: str, case_sensitive_name: bool = False) -> vmf_property.VMFProperty:
         """
         Returns first subproperty if it exists. Otherwise None
         :param name: Name of the property to return
@@ -209,7 +210,7 @@ class VMFElement:
             return elements[0]
         return None
 
-    def set_items(self, items: typing.List[property.VMFProperty | VMFElement]) -> None:
+    def set_items(self, items: typing.List[vmf_property.VMFProperty | VMFElement]) -> None:
         """
         Sets the items of this element.
         :param items: The properties to set
@@ -219,7 +220,7 @@ class VMFElement:
         """
         self.items = items
 
-    def matches(self, _name: str, _items: typing.List[property.VMFProperty | VMFElement] = None,
+    def matches(self, _name: str, _items: typing.List[vmf_property.VMFProperty | VMFElement] = None,
                 case_sensitive_name: bool = False) -> bool:
         """
         :param _name: The name to check

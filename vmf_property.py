@@ -1,6 +1,6 @@
 class VMFProperty:
     """
-    Represents a property in a vmf file. (i.e. "classname" "worldspawn"). It's a key value pair. I should probably make this a dictionary. Don't worry about it.
+    Represents a property in a vmf file. (i.e. "classname" "worldspawn"). It's a key value pair.
     :ivar name: The name of the property
     :type name: str
     :ivar value: The value of the property
@@ -71,7 +71,7 @@ class VMFProperty:
         :type name: str
         :param value: The value to check, defaults to None. If None is selected, will return if the name matches.
         :type value: str, optional
-        :param case_sensitive_name: Whether or not the name should be case sensitive, defaults to False.
+        :param case_sensitive_name: Whether the name should be case sensitive, defaults to False.
         :type case_sensitive_name: bool, optional
         :return: if this property matches the given name and value
         :rtype: bool

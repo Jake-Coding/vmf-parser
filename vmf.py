@@ -11,7 +11,7 @@ class VMF:
                                 "cordon", "cordons"]
 
     textures_to_change: dict[str, dict[str, str]] = {
-        # {entity name (lowercase) : {old_texture (UPPERCASE) : new_texture}} TODO - Should I make this a class?
+        # {entity name (lowercase) : {old_texture (UPPERCASE) : new_texture}}
         "trigger_catapult": {"TOOLS/TOOLSTRIGGER": "TOOLS/TRIGGER_CATAPULT"},
         "func_nogrenades": {"TOOLS/TOOLSTRIGGER": "TOOLS/TRIGGER_NOGRENADES"},
         "trigger_teleport": {"TOOLS/TOOLSTRIGGER": "TOOLS/TRIGGER_TELEPORT"},

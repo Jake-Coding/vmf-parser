@@ -41,4 +41,3 @@ print(out_path)
 
 with open(out_path, "w") as f:
     f.write(vmf.__str__())
-
