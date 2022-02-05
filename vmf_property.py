@@ -18,23 +18,14 @@ class VMFProperty:
         self.name = name
         self.value = value
 
-    def __str__(self):
+    def get_name(self) -> str:
         """
-        Returns a string representation of this property as it would appear in a .vmf
-        :return: The string representation of this property
+        get name of this property
+
+        :return: name of this property
         :rtype: str
         """
-        return f"\"{self.name}\" \"{self.value}\""
-
-    def set_value(self, new_value: str) -> None:
-        """
-        Modifies the value of a property
-        :param new_value: The new value of the property
-        :type new_value: str
-        :return: None
-        :rtype: None
-        """
-        self.value = new_value
+        return self.name
 
     def get_value(self) -> str:
         """
@@ -45,15 +36,6 @@ class VMFProperty:
         """
         return self.value
 
-    def get_name(self) -> str:
-        """
-        get name of this property
-
-        :return: name of this property
-        :rtype: str
-        """
-        return self.name
-
     def rename(self, new_name: str) -> None:
         """
         Renames this property.
@@ -63,6 +45,16 @@ class VMFProperty:
         :rtype: None
         """
         self.name = new_name
+
+    def set_value(self, new_value: str) -> None:
+        """
+        Modifies the value of a property
+        :param new_value: The new value of the property
+        :type new_value: str
+        :return: None
+        :rtype: None
+        """
+        self.value = new_value
 
     def matches(self, name: str, value: str = None, case_sensitive_name: bool = False) -> bool:
         """
@@ -79,3 +71,13 @@ class VMFProperty:
         if case_sensitive_name:
             return self.name == name and (self.value == value or value is None)
         return self.name.lower() == name.lower() and (self.value == value or value is None)
+
+    def __str__(self):
+        """
+        Returns a string representation of this property as it would appear in a .vmf
+        :return: The string representation of this property
+        :rtype: str
+        """
+        return f"\"{self.name}\" \"{self.value}\""
+
+

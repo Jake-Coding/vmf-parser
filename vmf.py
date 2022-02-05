@@ -64,7 +64,7 @@ class VMF:
             }
             "key" "value"
         }
-            I haven't seen a VMF without this format so far, so this should be robust enough.
+            I haven't seen a VMF without this format so far, so hopefully this should be robust enough.
 
         :param lines: The lines of the VMF file
         :type lines: typing.List[str]
@@ -184,7 +184,7 @@ class VMF:
 
             i += 1
 
-    def tf2_remove_class_attrs(self, class_n: int, all_except_one: bool = False) -> None:
+    def _tf2_remove_class_attrs(self, class_n: int, all_except_one: bool = False) -> None:
         """
         remove class tf filters and all entities that reference them
         Steps taken:
@@ -361,7 +361,7 @@ class VMF:
                     continue
             i += 1
 
-        self.tf2_remove_class_attrs(for_class_num, all_except_one=True)  # remove all other-class-specific attributes
+        self._tf2_remove_class_attrs(for_class_num, all_except_one=True)  # remove all other-class-specific attributes
 
     def __str__(self) -> str:
         """

@@ -16,6 +16,67 @@ class VMFElement:
         self.name = name
         self.items = items
 
+    def get_name(self) -> str:
+        """
+        Gets the name of this element.
+
+        :return: The name of this element
+        :rtype: str
+        """
+        return self.name
+
+    def get_items(self) -> typing.List[vmf_property.VMFProperty | VMFElement]:
+        """
+        Returns a list of all items of this element.
+        :return: A list of all items of this element
+        :rtype: list
+        """
+        return self.items
+
+    def rename(self, new_name: str) -> None:
+        """
+        Renames this element.
+        :param new_name: The new name of this element
+        :type new_name: str
+        :return: None
+        :rtype: None
+        """
+        self.name = new_name
+
+    def set_items(self, items: typing.List[vmf_property.VMFProperty | VMFElement]) -> None:
+        """
+        Sets the items of this element.
+        :param items: The properties to set
+        :type items: list
+        :return: None
+        :rtype: None
+        """
+        self.items = items
+
+    def is_empty(self) -> bool:
+        """
+        Does what it says. Is len(properties) == 0
+        :return: If this has no items in it
+        :rtype: bool
+        """
+        return len(self.items) == 0
+
+    def matches(self, _name: str, _items: typing.List[vmf_property.VMFProperty | VMFElement] = None,
+                case_sensitive_name: bool = False) -> bool:
+        """
+        :param _name: The name to check
+        :type _name: str
+        :param _items: The items to check
+        :type _items: list
+        :param case_sensitive_name: Whether the name should be case sensitive, defaults to False.
+        :type case_sensitive_name: bool, optional
+        :return: if this element matches the given parameters
+        :rtype: bool
+        """
+        if case_sensitive_name:
+            return self.name == _name and (_items is None or _items == self.items)
+        return self.name.lower() == _name.lower() and (_items is None or _items == self.items)
+
     def first_layer_has(self, property_name: str, property_value: str = None,
                         case_sensitive_name: bool = False) -> bool:
         """
@@ -36,13 +97,69 @@ class VMFElement:
                 return True
         return False
 
-    def is_empty(self) -> bool:
+    def add_property(self, prop: vmf_property.VMFProperty) -> bool:
         """
-        Does what it says. Is len(properties) == 0
-        :return: If this has no items in it
+        Adds a property to the element.
+        :param prop: The property to add
+        :type prop: VMFProperty
+        :return: if the property was added
         :rtype: bool
         """
-        return len(self.items) == 0
+        self.items.append(prop)
+        return True
+
+    def add_property_by_values(self, prop_name: str, new_value: str) -> bool:
+        """
+        Adds a property to the element.
+        :param prop_name: The name of the property to add
+        :type prop_name: str
+        :param new_value: The value of the property to add
+        :type new_value: str
+        :return: if the property was added
+        :rtype: bool
+        """
+        self.items.append(vmf_property.VMFProperty(prop_name, new_value))
+        return True
+
+    def modify_property_name(self, property_name: str, new_name: str, case_sensitive_name: bool = False) -> bool:
+        """
+        Modifies the name of a property.
+        :param property_name: The name of the property to modify
+        :type property_name: str
+        :param new_name: The new name of the property
+        :type new_name: str
+        :param case_sensitive_name: Whether the name of the property should be case sensitive, defaults to False.
+        :type case_sensitive_name: bool, optional
+        :return: if the name was found and modified
+        :rtype: bool
+        """
+        for p in self.items:
+            if type(p) == vmf_property.VMFProperty and (p.matches(property_name, None, case_sensitive_name)):
+                p.rename(new_name)
+                return True
+            else:
+                p.modify_property_name(property_name, new_name)
+        return False
+
+    def modify_property_value(self, property_name: str, new_value: str, case_sensitive_name: bool = False) -> bool:
+        """
+        Modifies the value of a property.
+        :param property_name: The name of the property to modify
+        :type property_name: str
+        :param new_value: The new value of the property
+        :type new_value: str
+        :param case_sensitive_name: Whether the name of the property should be case sensitive, defaults to False.
+        :type case_sensitive_name: bool, optional
+        :return: if the property was found and modified
+        :rtype: bool
+        """
+        for p in self.items:
+            if (type(p) == vmf_property.VMFProperty) and (p.matches(property_name, None, case_sensitive_name)):
+                p.set_value(new_value)
+                return True
+            else:
+                p.modify_property_value(property_name, new_value)
+        return False
 
     def delete_property(self, property_name: str, property_value: str = None,
                         case_sensitive_name: bool = False) -> bool:
@@ -66,97 +183,6 @@ class VMFElement:
             else:
                 p.delete_property(property_name)
         return False
-
-    def modify_property_value(self, property_name: str, new_value: str, case_sensitive_name: bool = False) -> bool:
-        """
-        Modifies the value of a property.
-        :param property_name: The name of the property to modify
-        :type property_name: str
-        :param new_value: The new value of the property
-        :type new_value: str
-        :param case_sensitive_name: Whether the name of the property should be case sensitive, defaults to False.
-        :type case_sensitive_name: bool, optional
-        :return: if the property was found and modified
-        :rtype: bool
-        """
-        for p in self.items:
-            if (type(p) == vmf_property.VMFProperty) and (p.matches(property_name, None, case_sensitive_name)):
-                p.set_value(new_value)
-                return True
-            else:
-                p.modify_property_value(property_name, new_value)
-        return False
-
-    def modify_property_name(self, property_name: str, new_name: str, case_sensitive_name: bool = False) -> bool:
-        """
-        Modifies the name of a property.
-        :param property_name: The name of the property to modify
-        :type property_name: str
-        :param new_name: The new name of the property
-        :type new_name: str
-        :param case_sensitive_name: Whether the name of the property should be case sensitive, defaults to False.
-        :type case_sensitive_name: bool, optional
-        :return: if the name was found and modified
-        :rtype: bool
-        """
-        for p in self.items:
-            if type(p) == vmf_property.VMFProperty and (p.matches(property_name, None, case_sensitive_name)):
-                p.rename(new_name)
-                return True
-            else:
-                p.modify_property_name(property_name, new_name)
-        return False
-
-    def add_property_by_values(self, prop_name: str, new_value: str) -> bool:
-        """
-        Adds a property to the element.
-        :param prop_name: The name of the property to add
-        :type prop_name: str
-        :param new_value: The value of the property to add
-        :type new_value: str
-        :return: if the property was added
-        :rtype: bool
-        """
-        self.items.append(vmf_property.VMFProperty(prop_name, new_value))
-        return True
-
-    def add_property(self, prop: vmf_property.VMFProperty) -> bool:
-        """
-        Adds a property to the element.
-        :param prop: The property to add
-        :type prop: VMFProperty
-        :return: if the property was added
-        :rtype: bool
-        """
-        self.items.append(prop)
-        return True
-
-    def rename(self, new_name: str) -> None:
-        """
-        Renames this element.
-        :param new_name: The new name of this element
-        :type new_name: str
-        :return: None
-        :rtype: None
-        """
-        self.name = new_name
-
-    def get_name(self) -> str:
-        """
-        Gets the name of this element.
-
-        :return: The name of this element
-        :rtype: str
-        """
-        return self.name
-
-    def get_items(self) -> typing.List[vmf_property.VMFProperty | VMFElement]:
-        """
-        Returns a list of all items of this element.
-        :return: A list of all items of this element
-        :rtype: list
-        """
-        return self.items
 
     def get_subproperties_by_name(self, name: str, case_sensitive_name: bool = False) -> typing.List[
         vmf_property.VMFProperty]:
@@ -209,32 +235,6 @@ class VMFElement:
         if len(elements := self.get_subelements_by_name(name, case_sensitive_name)) != 0:
             return elements[0]
         return None
-
-    def set_items(self, items: typing.List[vmf_property.VMFProperty | VMFElement]) -> None:
-        """
-        Sets the items of this element.
-        :param items: The properties to set
-        :type items: list
-        :return: None
-        :rtype: None
-        """
-        self.items = items
-
-    def matches(self, _name: str, _items: typing.List[vmf_property.VMFProperty | VMFElement] = None,
-                case_sensitive_name: bool = False) -> bool:
-        """
-        :param _name: The name to check
-        :type _name: str
-        :param _items: The items to check
-        :type _items: list
-        :param case_sensitive_name: Whether the name should be case sensitive, defaults to False.
-        :type case_sensitive_name: bool, optional
-        :return: if this element matches the given parameters
-        :rtype: bool
-        """
-        if case_sensitive_name:
-            return self.name == _name and (_items is None or _items == self.items)
-        return self.name.lower() == _name.lower() and (_items is None or _items == self.items)
 
     @staticmethod
     def _elem_str_helper(_item: VMFElement, indent: int) -> str:
