@@ -11,9 +11,7 @@ py make_mommy_mod.py
 ```
 ## Notes
 
-Hopefully the code is decently self-documenting. 
-Worth noting that while a `VMFProperty` is a `"key" "value"` pair, the properties list of an VMFElement can include both
-`VMFElement` and `VMFProperty` 
+Hopefully the code is decently self-documenting. Godspeed, and feel free to DM me with any questions
 
 ## Contributing
 
