@@ -1,13 +1,30 @@
 import vmf as v
 import os
 
+# TODO - Fix this whole thing
+
+TEXTURES_TO_CHANGE_TEST = {
+    "world": {
+        "bbiniate/plasterbb2a" : "brick/brickwall002",
+        "bbiniate/plasterbb0f" : "brick/brickwall005_normal",
+        "bbiniate/plasterbb0b" : "building_template/building_template007a",
+        "bbiniate/plasterbb0g" : "brick/shalewall002c",
+        "bbiniate/plasterbb1n" : "medieval/cobblestone005",
+        "bbiniate/plasterbb3c" : "medieval/cobblestone004",
+        "bbiniate/plasterbb1g" : "medieval/cobblestone006",
+        "bbiniate/plasterbb2n" : "medieval/stonewall001a",
+
+    }
+
+}
 user_in = input("Path to the map (vmf)\n> ")
 user_in = os.path.abspath(user_in)
 assert os.path.splitext(user_in)[1] == '.vmf'
 try:
-    vmf = v.VMF(vmf_path=user_in)
+    vmf = v.VMF(vmf_path=user_in, additional_texture_changes=TEXTURES_TO_CHANGE_TEST)
 except Exception as e:
-    print(e)
+    print(e.with_traceback())
+
     exit()
 
 for_class: str = input("What class is this for?\n> ")
@@ -17,7 +34,7 @@ for_class = for_class.lower()
 class_num: int = 0
 if for_class in ["demo", "d"]:
     for_class = "demoman"
-if for_class == ["solly", "s"]:
+if for_class in ["solly", "s"]:
     for_class = "soldier"
 
 if for_class not in classes:

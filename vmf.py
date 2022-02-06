@@ -11,30 +11,37 @@ class VMF:
                                 "cordon", "cordons"]
 
     textures_to_change: dict[str, dict[str, str]] = {
-        # {entity name (lowercase) : {old_texture (UPPERCASE) : new_texture}}
+        # {entity type  : {old_texture  : new_texture}}
         "trigger_catapult": {"TOOLS/TOOLSTRIGGER": "TOOLS/TRIGGER_CATAPULT"},
         "func_nogrenades": {"TOOLS/TOOLSTRIGGER": "TOOLS/TRIGGER_NOGRENADES"},
         "trigger_teleport": {"TOOLS/TOOLSTRIGGER": "TOOLS/TRIGGER_TELEPORT"},
 
     }
 
-    def __init__(self, *, vmf_path: str = None, vmf_elements: dict = None):
+    def __init__(self, *, vmf_path: str = None, vmf_elements: dict = None, additional_texture_changes: dict = None):
         """
         Initializes the VMF object.
         :param vmf_path: the path to a file to parse
         :type vmf_path: str
         :param vmf_elements: a pre-existing dict resembling a VMF class
         :type vmf_elements: dict
+        :param additional_texture_changes: Any additional textures_to_change. Same format as the textures_to_change
+        :type additional_texture_changes: dict[str, [dict[str, str]]
         """
-
+        self.textures_to_change = VMF.textures_to_change
         # no VMF should have more than these elements
-        self.elements = {"versioninfo": None, "visgroups": None, "viewsettings": None, "world": None, "entities": [],
-                         "hidden": None, "cameras": None, "cordon": None, "cordons": None}
+        self.elements: dict[str, list | None | ve.VMFElement] = {"versioninfo": None, "visgroups": None,
+            "viewsettings": None, "world": None, "entities": [], "hidden": None, "cameras": None, "cordon": None,
+            "cordons": None}
 
         if vmf_path is not None:
             self._parse(vmf_path)
         else:
             self.elements = vmf_elements
+        if additional_texture_changes is not None:
+            self.textures_to_change |= additional_texture_changes
+        self.textures_to_change = {k.upper() : {v1.upper() : v2.upper() for v1, v2 in v.items()} for k, v in self.textures_to_change.items()}
+
 
     @staticmethod
     def _parse_property(line: str) -> vp.VMFProperty:
@@ -121,8 +128,24 @@ class VMF:
             else:
                 i += 1
 
-    @staticmethod
-    def change_texture_to_momentum(entity: ve.VMFElement) -> None:
+    def change_texture_of_sides(self, solid: ve.VMFElement, ent_type: str):
+        """
+        A function to changes the textures of the sides of a given solid using the textures_to_change
+        :param solid: The solid whose sides to change
+        :type solid: ve.VMFElement
+        :param ent_type: Type of entity (func_brush, etc. For world solids, ent_type = "world"
+        :return: None
+        :rtype: None
+        """
+        ent_type = ent_type.upper()
+        if ent_type not in self.textures_to_change:
+            return
+        for side in solid.get_subelements_by_name("side"):
+            side_mat: vp.VMFProperty = side.get_first_subproperty("material")
+            if side_mat.get_value().upper() in self.textures_to_change[ent_type]:
+                side_mat.set_value(self.textures_to_change[ent_type][side_mat.get_value().upper()])
+
+    def change_texture(self, entity: ve.VMFElement) -> None:
         """
         Changes the textures of the entity to the correct ones for Momentum.
         :param entity: The entity to change the textures of
@@ -131,14 +154,18 @@ class VMF:
         :rtype: None
         """
         if entity.first_layer_has("solid"):
-            ent_type: str = entity.get_first_subproperty("classname").get_value().lower()
-            if ent_type in VMF.textures_to_change:
+            ent_type: str = entity.get_first_subproperty("classname").get_value().upper()
+            if ent_type in self.textures_to_change:
                 solids: list[ve.VMFElement] = entity.get_subelements_by_name("solid")
                 for solid in solids:
-                    for side in solid.get_subelements_by_name("side"):
-                        side_mat: vp.VMFProperty = side.get_first_subproperty("material")
-                        if side_mat.get_value().upper() in VMF.textures_to_change[ent_type]:  # uppercase to match VMF
-                            side_mat.set_value(VMF.textures_to_change[ent_type][side_mat.get_value()])
+                    self.change_texture_of_sides(solid, ent_type)
+
+    def change_world_textures(self):
+        if "WORLD" not in self.textures_to_change:
+            print("guh")
+            return
+        for solid in self.elements["world"].get_subelements_by_name("solid"):
+            self.change_texture_of_sides(solid, "WORLD")
 
     def _tf2_simplify_class_attrs(self) -> None:
         """
@@ -284,7 +311,7 @@ class VMF:
         """
         Converts the VMF to a hopefully working momentum map.
         Steps taken:
-        1. Change tool textures to momentum tool textures, if applicable
+        1. Change textures
         2. Remove all regen triggers
         2a. Remove func_regenerate
         2b. Remove trigger_hurt
@@ -303,11 +330,13 @@ class VMF:
 
         """
 
+        self.change_world_textures()
+
         i: int = 0
         while i < len(self.elements["entities"]):
             entity: ve.VMFElement = self.elements["entities"][i]
 
-            VMF.change_texture_to_momentum(entity)  # change tool textures to momentum tool textures, if applicable
+            self.change_texture(entity)  # change textures
 
             if entity.first_layer_has("classname", "func_regenerate"):
                 self.elements["entities"].remove(entity)  # remove regen triggers

@@ -1,3 +1,4 @@
+from __future__ import annotations
 class VMFProperty:
     """
     Represents a property in a vmf file. (i.e. "classname" "worldspawn"). It's a key value pair.
@@ -36,7 +37,7 @@ class VMFProperty:
         """
         return self.value
 
-    def rename(self, new_name: str) -> None:
+    def set_name(self, new_name: str) -> None:
         """
         Renames this property.
         :param new_name: The new name of this property
@@ -56,23 +57,17 @@ class VMFProperty:
         """
         self.value = new_value
 
-    def matches(self, name: str, value: str = None, case_sensitive_name: bool = False) -> bool:
+    def __eq__(self, other: VMFProperty) -> bool:
         """
-        Checks if this property matches the given name and value.
-        :param name: The name to check
-        :type name: str
-        :param value: The value to check, defaults to None. If None is selected, will return if the name matches.
-        :type value: str, optional
-        :param case_sensitive_name: Whether the name should be case sensitive, defaults to False.
-        :type case_sensitive_name: bool, optional
-        :return: if this property matches the given name and value
+        Case-insensitive inequality between VMFProperties
+        :param other: The object to compare this to
+        :type other: VMFProperty
+        :return: if the properties have the same name and value
         :rtype: bool
         """
-        if case_sensitive_name:
-            return self.name == name and (self.value == value or value is None)
-        return self.name.lower() == name.lower() and (self.value == value or value is None)
+        return type(self) == type(other) and self.name.lower() == other.get_name().lower() and self.value.lower() == other.get_value().lower()
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Returns a string representation of this property as it would appear in a .vmf
         :return: The string representation of this property

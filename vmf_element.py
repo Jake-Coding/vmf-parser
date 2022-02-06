@@ -6,24 +6,39 @@ import typing
 class VMFElement:
     """
     Represents an element of a .vmf file. Contains a name and a list of properties/elements.
-    :ivar name: The name of the element
-    :type name: str
+    Example:
+    solid
+    {
+        "thing" "value"
+        "thing2" "value2"
+        side
+        {
+            "more things" "and values"
+            another_element
+            {
+                "it keeps going" "forever!!!"
+            }
+        }
+        "can also have stuff here" "unfortunately"
+    }
+    :ivar element_name: The name of the element
+    :type element_name: str
     :ivar items: The parts of the element. These can be VMFProperty objects or VMFElement objects.
     :type items: list
     """
 
-    def __init__(self, name: str, items: typing.List[vmf_property.VMFProperty | VMFElement] = None):
-        self.name = name
-        self.items = items
+    def __init__(self, element_name: str, items: list[vmf_property.VMFProperty | VMFElement] = None):
+        self._element_name = element_name
+        self._items = items
 
-    def get_name(self) -> str:
+    def get_element_name(self) -> str:
         """
         Gets the name of this element.
 
         :return: The name of this element
         :rtype: str
         """
-        return self.name
+        return self._element_name
 
     def get_items(self) -> typing.List[vmf_property.VMFProperty | VMFElement]:
         """
@@ -31,9 +46,9 @@ class VMFElement:
         :return: A list of all items of this element
         :rtype: list
         """
-        return self.items
+        return self._items
 
-    def rename(self, new_name: str) -> None:
+    def set_element_name(self, new_name: str) -> None:
         """
         Renames this element.
         :param new_name: The new name of this element
@@ -41,7 +56,7 @@ class VMFElement:
         :return: None
         :rtype: None
         """
-        self.name = new_name
+        self._element_name = new_name
 
     def set_items(self, items: typing.List[vmf_property.VMFProperty | VMFElement]) -> None:
         """
@@ -51,7 +66,7 @@ class VMFElement:
         :return: None
         :rtype: None
         """
-        self.items = items
+        self._items = items
 
     def is_empty(self) -> bool:
         """
@@ -59,7 +74,27 @@ class VMFElement:
         :return: If this has no items in it
         :rtype: bool
         """
-        return len(self.items) == 0
+        return len(self._items) == 0
+
+    def __eq__(self, other: VMFElement | str ):
+        if type(other) == str:
+            return self._element_name.lower() == other
+        elif type(other) == type(self):
+            return self.get_element_name().lower() == other.get_element_name().lower() and self.get_items() == other.get_items()
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        for item in self.get_items():
+            if type(item) == vmf_property.VMFProperty:
+                yield item
+        raise StopIteration()
+
+    def __getitem__(self, item_name : str) -> vmf_property.VMFProperty:
+        for item in self.get_items():
+            pass
+
 
     def matches(self, _name: str, _items: typing.List[vmf_property.VMFProperty | VMFElement] = None,
                 case_sensitive_name: bool = False) -> bool:
@@ -74,8 +109,8 @@ class VMFElement:
         :rtype: bool
         """
         if case_sensitive_name:
-            return self.name == _name and (_items is None or _items == self.items)
-        return self.name.lower() == _name.lower() and (_items is None or _items == self.items)
+            return self._element_name == _name and (_items is None or _items == self._items)
+        return self._element_name.lower() == _name.lower() and (_items is None or _items == self._items)
 
     def first_layer_has(self, property_name: str, property_value: str = None,
                         case_sensitive_name: bool = False) -> bool:
@@ -92,7 +127,7 @@ class VMFElement:
         :return: if the property was found
         :rtype: bool
         """
-        for p in self.items:
+        for p in self._items:
             if type(p) == vmf_property.VMFProperty and p.matches(property_name, property_value, case_sensitive_name):
                 return True
         return False
@@ -105,7 +140,7 @@ class VMFElement:
         :return: if the property was added
         :rtype: bool
         """
-        self.items.append(prop)
+        self._items.append(prop)
         return True
 
     def add_property_by_values(self, prop_name: str, new_value: str) -> bool:
@@ -118,7 +153,7 @@ class VMFElement:
         :return: if the property was added
         :rtype: bool
         """
-        self.items.append(vmf_property.VMFProperty(prop_name, new_value))
+        self._items.append(vmf_property.VMFProperty(prop_name, new_value))
         return True
 
     def modify_property_name(self, property_name: str, new_name: str, case_sensitive_name: bool = False) -> bool:
@@ -133,7 +168,7 @@ class VMFElement:
         :return: if the name was found and modified
         :rtype: bool
         """
-        for p in self.items:
+        for p in self._items:
             if type(p) == vmf_property.VMFProperty and (p.matches(property_name, None, case_sensitive_name)):
                 p.rename(new_name)
                 return True
@@ -153,7 +188,7 @@ class VMFElement:
         :return: if the property was found and modified
         :rtype: bool
         """
-        for p in self.items:
+        for p in self._items:
             if (type(p) == vmf_property.VMFProperty) and (p.matches(property_name, None, case_sensitive_name)):
                 p.set_value(new_value)
                 return True
@@ -175,10 +210,10 @@ class VMFElement:
         :return: if the property was found and deleted
         :rtpye: bool
         """
-        for p in self.items:
+        for p in self._items:
             if type(p) == vmf_property.VMFProperty:
                 if p.matches(property_name, property_value, case_sensitive_name):
-                    self.items.remove(p)
+                    self._items.remove(p)
                     return True
             else:
                 p.delete_property(property_name)
@@ -196,7 +231,7 @@ class VMFElement:
         :rtype: list
         """
         matching_props: list[vmf_property.VMFProperty] = []
-        for p in self.items:
+        for p in self._items:
             if type(p) == vmf_property.VMFProperty and p.matches(name, None, case_sensitive_name):
                 matching_props.append(p)
         return matching_props
@@ -226,7 +261,7 @@ class VMFElement:
         :rtype: list
         """
         matching_elems: list[VMFElement] = []
-        for e in self.items:
+        for e in self._items:
             if type(e) == VMFElement and e.matches(name, None, case_sensitive_name):
                 matching_elems.append(e)
         return matching_elems
@@ -267,4 +302,4 @@ class VMFElement:
         :rtype: str
         """
 
-        return self.name + "\n{\n" + VMFElement._elem_str_helper(self, 1) + "\n}\n"
+        return self._element_name + "\n{\n" + VMFElement._elem_str_helper(self, 1) + "\n}\n"
