@@ -57,7 +57,7 @@ class VMFProperty:
         """
         self.value = new_value
 
-    def __eq__(self, other: VMFProperty) -> bool:
+    def __eq__(self, other: VMFProperty | str) -> bool:
         """
         Case-insensitive inequality between VMFProperties
         :param other: The object to compare this to
@@ -65,7 +65,11 @@ class VMFProperty:
         :return: if the properties have the same name and value
         :rtype: bool
         """
-        return type(self) == type(other) and self.name.lower() == other.get_name().lower() and self.value.lower() == other.get_value().lower()
+        if type(self) == type(other):
+            return self.name.lower() == other.get_name().lower() and self.value.lower() == other.get_value().lower()
+        elif type(other) == str:
+            return self.name.lower() == other.lower()
+        return False
 
     def __str__(self) -> str:
         """
