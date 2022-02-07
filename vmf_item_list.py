@@ -3,8 +3,6 @@ from __future__ import annotations
 import collections.abc
 import typing
 
-import vmf_element
-import vmf_property
 
 
 class _VMFItemListIterator(collections.abc.Iterator):
@@ -24,7 +22,7 @@ T = typing.TypeVar("T")
 class VMFItemList(collections.abc.Collection, typing.Generic[T]):
 
     def __init__(self, items : list[T] = None):
-        assert T in (vmf_element.VMFElement, vmf_property.VMFProperty)
+        # T should be in (VMFProperty, VMFElement)
         self._items = []
         if items:
             self._items = items
