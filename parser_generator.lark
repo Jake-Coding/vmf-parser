@@ -1,0 +1,154 @@
+fgd : (element | WS)*
+element : (mapsize | include | class)*
+
+VECTOR : (SIGNED_NUMBER" "SIGNED_NUMBER" "SIGNED_NUMBER)
+COLOR : VECTOR(" "SIGNED_NUMBER)?
+ALPHANUM : (WORD|SIGNED_NUMBER)+
+VALIDNAME : (ALPHANUM|"_")+
+
+PATH : /".*"/
+COMMENT : /\/\/.*/WS?
+
+mapsize : "@mapsize(" SIGNED_NUMBER ", " SIGNED_NUMBER ")"
+include : /@include.*/
+
+class : base_class
+        | point_class
+        | npc_class
+        | solid_class
+        | key_frame_class
+        | move_class
+        | filter_class
+
+base_class : BASE_CLASS_IDENTIFIER WS? inheritance_section_ws? "=" WS? entity
+BASE_CLASS_IDENTIFIER : "@BaseClass"
+
+point_class : POINT_CLASS_IDENTIFIER
+POINT_CLASS_IDENTIFIER : "@PointClass" | "@PointClasssprite"
+
+npc_class : NPC_CLASS_IDENTIFIER
+NPC_CLASS_IDENTIFIER : "@NPCClass" | "@NPCClasssprite"
+
+solid_class : SOLID_CLASS_IDENTIFIER
+SOLID_CLASS_IDENTIFIER : "@SolidClass" | "@SolidClasssprite"
+
+key_frame_class : KEY_FRAME_CLASS_IDENTIFIER
+KEY_FRAME_CLASS_IDENTIFIER : "@KeyFrameClass" | "@KeyFrameClasssprite"
+
+move_class : MOVE_CLASS_IDENTIFIER
+MOVE_CLASS_IDENTIFIER : "@MoveClass" | "@MoveClasssprite"
+
+filter_class : FILTER_CLASS_IDENTIFIER
+FILTER_CLASS_IDENTIFIER : "@FilterClass" | "@FilterClasssprite"
+
+
+inheritance_section_ws : inheritance_section WS?
+inheritance_section : (class_property_ws | COMMENT)* WS?
+
+class_property_ws : class_property WS?
+class_property : axis
+                | base
+                | bbox
+                | color
+                | cylinder
+                | frustum
+                | iconsprite
+                | lightcone
+                | lightprop
+                | line
+                | obb
+                | origin
+                | sidelist
+                | size
+                | sphere
+                | studio
+                | studioprop
+                | vecline
+                | wirebox
+                | worldtext
+                | HALFGRIDSNAP
+                | OTHER_CLASS_PROPERTY
+
+
+OTHER_CLASS_PROPERTY : VALIDNAME"()"
+
+axis : "axis(" PROPERTY ")"
+PROPERTY : /[^)]+/ // fix
+
+base : "base(" BASECLASS (", "BASECLASS)* ")"
+BASECLASS : WORD
+
+bbox : "bbox(" VECTOR ", " VECTOR ")"
+
+color : "color(" COLOR")"
+
+cylinder : "cylinder("COLOR", " CYLINDER_KEY ", " CYLINDER_NAME ", " CYLINDER_RADIUS (", "CYLINDER_KEY)?(", "CYLINDER_ENDVAL)?(", "CYLINDER_RADIUS)? ")"
+CYLINDER_KEY : VALIDNAME
+CYLINDER_NAME : VALIDNAME
+CYLINDER_RADIUS : ALPHANUM
+CYLINDER_ENDVAL : ALPHANUM
+
+frustum : "frustum(" (VALIDNAME", "VALIDNAME", "VALIDNAME", "COLOR", "(SIGNED_NUMBER | ALPHANUM))? ")"
+
+HALFGRIDSNAP : "halfgridsnap"
+
+iconsprite : "iconsprite(" PATH ")"
+
+lightcone : "lightcone(" (VALIDNAME", "VALIDNAME", "COLOR", "(ALPHANUM | SIGNED_NUMBER))? ")"
+
+lightprop : "lightprop(" PATH ")"
+
+line : "line(" COLOR", "VALIDNAME", "VALIDNAME[", "VALIDNAME [", "VALIDNAME]] ")"
+
+obb : "obb(" VECTOR ", " VECTOR ")"
+
+origin : "origin(" (VECTOR | VALIDNAME) ")"
+
+sidelist : "sidelist(" (VALIDNAME (", "VALIDNAME)*)? ")"
+
+size : "size(" VECTOR ", " VECTOR ")"
+
+sphere : "sphere(" WORD ")"
+
+studio : "studio(" PATH ")"
+
+studioprop : "studioprop(" PATH ")"
+
+vecline : "vecline(" (VECTOR | VALIDNAME) ")"
+
+wirebox : "wirebox(" (VECTOR", "VECTOR) | (VALIDNAME", "VALIDNAME) ")"
+
+worldtext : "worldtext()"
+
+entity : ENTITY_NAME WS? (":" WS? description)? WS? entity_inner_section
+ENTITY_NAME : VALIDNAME
+
+description : /".+"/ [WS? "+" WS? description]*
+
+entity_inner_section : "[" WS? (entity_property | entity_input | entity_output | COMMENT)* WS? "]"
+
+
+entity_property : (entity_property_normal | entity_property_choices | entity_property_flags) WS?
+
+entity_property_normal : entity_property_name_and_type ":" ENTITY_PROPERTY_STRING_NAME  [":" ENTITY_PROPERTY_DEFAULT  [ ":"  ENTITY_PROPERTY_DESCRIPTION]] WS?
+ENTITY_PROPERTY_STRING_NAME :  WS? /".+?(?=")"/ WS?
+ENTITY_PROPERTY_DEFAULT : WS? /"/? /.+?(?=\n|:)/ /"/? WS?
+ENTITY_PROPERTY_DESCRIPTION :  WS? /".+"/ WS?
+
+entity_property_name_and_type : WS? ENTITY_PROPERTY_NAME"("ENTITY_PROPERTY_TYPE")" WS?
+ENTITY_PROPERTY_NAME : WS? VALIDNAME WS?
+ENTITY_PROPERTY_TYPE : VALIDNAME
+
+entity_input : "input " entity_property_name_and_type [":" ENTITY_PROPERTY_DESCRIPTION]
+entity_output : "output" entity_property_name_and_type [":" ENTITY_PROPERTY_DESCRIPTION]
+
+entity_property_choices : entity_property_normal // fix these :))
+entity_property_flags : entity_property_normal
+
+
+
+
+
+%import common.WS
+%import common.WORD
+%import common.SIGNED_NUMBER
