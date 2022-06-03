@@ -9,4 +9,5 @@ parser = lark.Lark(get_text("./parser_generator.lark"), start="fgd", debug=True)
 
 print(parser)
 parsed = parser.parse(get_text("./not_an_fgd.fgd"))
-print(parsed.pretty())
+with open("fgd_tree.txt", "w") as f:
+    f.write(parsed.pretty())

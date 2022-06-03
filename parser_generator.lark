@@ -5,6 +5,7 @@ VECTOR : (SIGNED_NUMBER" "SIGNED_NUMBER" "SIGNED_NUMBER)
 COLOR : VECTOR(" "SIGNED_NUMBER)?
 ALPHANUM : (WORD|SIGNED_NUMBER)+
 VALIDNAME : (ALPHANUM|"_")+
+STRING : /".*?(?=")"/
 
 PATH : /".*"/
 COMMENT : /\/\/.*/WS?
@@ -12,34 +13,12 @@ COMMENT : /\/\/.*/WS?
 mapsize : "@mapsize(" SIGNED_NUMBER ", " SIGNED_NUMBER ")"
 include : /@include.*/
 
-class : base_class
-        | point_class
-        | npc_class
-        | solid_class
-        | key_frame_class
-        | move_class
-        | filter_class
+class : autovisgroup | (CLASS_IDENTIFIER WS? inheritance_section_ws? "=" WS? entity)
+CLASS_IDENTIFIER : "@"VALIDNAME
 
-base_class : BASE_CLASS_IDENTIFIER WS? inheritance_section_ws? "=" WS? entity
-BASE_CLASS_IDENTIFIER : "@BaseClass"
-
-point_class : POINT_CLASS_IDENTIFIER
-POINT_CLASS_IDENTIFIER : "@PointClass" | "@PointClasssprite"
-
-npc_class : NPC_CLASS_IDENTIFIER
-NPC_CLASS_IDENTIFIER : "@NPCClass" | "@NPCClasssprite"
-
-solid_class : SOLID_CLASS_IDENTIFIER
-SOLID_CLASS_IDENTIFIER : "@SolidClass" | "@SolidClasssprite"
-
-key_frame_class : KEY_FRAME_CLASS_IDENTIFIER
-KEY_FRAME_CLASS_IDENTIFIER : "@KeyFrameClass" | "@KeyFrameClasssprite"
-
-move_class : MOVE_CLASS_IDENTIFIER
-MOVE_CLASS_IDENTIFIER : "@MoveClass" | "@MoveClasssprite"
-
-filter_class : FILTER_CLASS_IDENTIFIER
-FILTER_CLASS_IDENTIFIER : "@FilterClass" | "@FilterClasssprite"
+autovisgroup : "@AutoVisgroup" WS? "=" WS? VISGROUPNAME WS? (inner_visgroup_list WS?)+
+VISGROUPNAME : /".+"/
+inner_visgroup_list : "[" WS? (/".*"/ WS? inner_visgroup_list?)+ "]" WS?
 
 
 inheritance_section_ws : inheritance_section WS?
@@ -76,7 +55,7 @@ axis : "axis(" PROPERTY ")"
 PROPERTY : /[^)]+/ // fix
 
 base : "base(" BASECLASS (", "BASECLASS)* ")"
-BASECLASS : WORD
+BASECLASS : VALIDNAME
 
 bbox : "bbox(" VECTOR ", " VECTOR ")"
 
@@ -88,17 +67,17 @@ CYLINDER_NAME : VALIDNAME
 CYLINDER_RADIUS : ALPHANUM
 CYLINDER_ENDVAL : ALPHANUM
 
-frustum : "frustum(" (VALIDNAME", "VALIDNAME", "VALIDNAME", "COLOR", "(SIGNED_NUMBER | ALPHANUM))? ")"
+frustum : "frustum(" (VALIDNAME", "VALIDNAME", "VALIDNAME", "(COLOR | VALIDNAME)", "(SIGNED_NUMBER |VALIDNAME))? ")"
 
 HALFGRIDSNAP : "halfgridsnap"
 
 iconsprite : "iconsprite(" PATH ")"
 
-lightcone : "lightcone(" (VALIDNAME", "VALIDNAME", "COLOR", "(ALPHANUM | SIGNED_NUMBER))? ")"
+lightcone : "lightcone(" (VALIDNAME", "VALIDNAME", "COLOR", "(VALIDNAME | SIGNED_NUMBER))? ")"
 
 lightprop : "lightprop(" PATH ")"
 
-line : "line(" COLOR", "VALIDNAME", "VALIDNAME[", "VALIDNAME [", "VALIDNAME]] ")"
+line : "line(" (COLOR | VALIDNAME)", "VALIDNAME", "VALIDNAME[", "VALIDNAME [", "VALIDNAME]] ")"
 
 obb : "obb(" VECTOR ", " VECTOR ")"
 
@@ -108,7 +87,7 @@ sidelist : "sidelist(" (VALIDNAME (", "VALIDNAME)*)? ")"
 
 size : "size(" VECTOR ", " VECTOR ")"
 
-sphere : "sphere(" WORD ")"
+sphere : "sphere(" VALIDNAME ")"
 
 studio : "studio(" PATH ")"
 
@@ -116,34 +95,38 @@ studioprop : "studioprop(" PATH ")"
 
 vecline : "vecline(" (VECTOR | VALIDNAME) ")"
 
-wirebox : "wirebox(" (VECTOR", "VECTOR) | (VALIDNAME", "VALIDNAME) ")"
+wirebox : "wirebox(" ((VECTOR", "VECTOR) | (VALIDNAME", "VALIDNAME)) ")"
 
 worldtext : "worldtext()"
 
 entity : ENTITY_NAME WS? (":" WS? description)? WS? entity_inner_section
 ENTITY_NAME : VALIDNAME
 
-description : /".+"/ [WS? "+" WS? description]*
+description : STRING [WS? "+" WS? description]*
 
 entity_inner_section : "[" WS? (entity_property | entity_input | entity_output | COMMENT)* WS? "]"
 
 
 entity_property : (entity_property_normal | entity_property_choices | entity_property_flags) WS?
 
-entity_property_normal : entity_property_name_and_type ":" ENTITY_PROPERTY_STRING_NAME  [":" ENTITY_PROPERTY_DEFAULT  [ ":"  ENTITY_PROPERTY_DESCRIPTION]] WS?
-ENTITY_PROPERTY_STRING_NAME :  WS? /".+?(?=")"/ WS?
-ENTITY_PROPERTY_DEFAULT : WS? /"/? /.+?(?=\n|:)/ /"/? WS?
-ENTITY_PROPERTY_DESCRIPTION :  WS? /".+"/ WS?
+
+entity_property_normal : entity_property_name_and_type ["readonly"] WS? ":" ENTITY_PROPERTY_STRING_NAME  [":" ENTITY_PROPERTY_DEFAULT  [ ":"  ENTITY_PROPERTY_DESCRIPTION]] WS?
+ENTITY_PROPERTY_STRING_NAME :  WS? STRING WS?
+ENTITY_PROPERTY_DEFAULT : (WS | (WS? (VALIDNAME | VECTOR | STRING)))   WS?
+ENTITY_PROPERTY_DESCRIPTION :  WS? STRING WS?
 
 entity_property_name_and_type : WS? ENTITY_PROPERTY_NAME"("ENTITY_PROPERTY_TYPE")" WS?
 ENTITY_PROPERTY_NAME : WS? VALIDNAME WS?
 ENTITY_PROPERTY_TYPE : VALIDNAME
 
-entity_input : "input " entity_property_name_and_type [":" ENTITY_PROPERTY_DESCRIPTION]
-entity_output : "output" entity_property_name_and_type [":" ENTITY_PROPERTY_DESCRIPTION]
+entity_input : "input " entity_property_name_and_type ["readonly"] WS? [":" ENTITY_PROPERTY_DESCRIPTION]
+entity_output : "output" entity_property_name_and_type ["readonly"] WS? [":" ENTITY_PROPERTY_DESCRIPTION]
 
-entity_property_choices : entity_property_normal // fix these :))
-entity_property_flags : entity_property_normal
+entity_property_choices : entity_property_normal WS? "=" WS? "[" WS? (entity_property_choice_option WS?)+ WS? "]"
+entity_property_choice_option : (VALIDNAME | STRING) WS? ":" ENTITY_PROPERTY_STRING_NAME WS?
+
+entity_property_flags : entity_property_name_and_type ["readonly"] WS? "=" WS? "[" WS? (entity_flag_option WS?)+ WS? "]"
+entity_flag_option : SIGNED_NUMBER WS? ":" WS? ENTITY_PROPERTY_STRING_NAME WS? ":" WS? /[01]/
 
 
 
