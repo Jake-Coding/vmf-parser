@@ -1,5 +1,5 @@
 fgd : (element | WS)*
-element : (mapsize | include | class)*
+element : (mapsize | include | fgd_class)*
 
 VECTOR : (SIGNED_NUMBER" "SIGNED_NUMBER" "SIGNED_NUMBER)
 COLOR : VECTOR(" "SIGNED_NUMBER)?
@@ -13,7 +13,7 @@ COMMENT : /\/\/.*/WS?
 mapsize : "@mapsize(" SIGNED_NUMBER ", " SIGNED_NUMBER ")"
 include : /@include.*/
 
-class : autovisgroup | (CLASS_IDENTIFIER WS? inheritance_section_ws? "=" WS? entity)
+fgd_class : autovisgroup | (CLASS_IDENTIFIER WS? inheritance_section_ws? "=" WS? entity)
 CLASS_IDENTIFIER : "@"VALIDNAME
 
 autovisgroup : "@AutoVisgroup" WS? "=" WS? VISGROUPNAME WS? (inner_visgroup_list WS?)+
