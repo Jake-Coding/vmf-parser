@@ -7,6 +7,8 @@ ALPHANUM : (WORD|SIGNED_NUMBER)+
 VALIDNAME : (ALPHANUM|"_")+
 STRING : /".*?(?=")"/
 
+READONLY : "readonly" WS?
+
 PATH : /".*"/
 COMMENT : /\/\/.*/WS?
 
@@ -112,22 +114,22 @@ entity_inner_section : "[" WS? (entity_property | entity_input | entity_output |
 entity_property : (entity_property_normal | entity_property_choices | entity_property_flags) WS?
 
 
-entity_property_normal : entity_property_name_and_type ["readonly"] WS? ":" ENTITY_PROPERTY_STRING_NAME  [":" ENTITY_PROPERTY_DEFAULT  [ ":"  ENTITY_PROPERTY_DESCRIPTION]] WS?
+entity_property_normal : entity_property_name_and_type  WS? ":" ENTITY_PROPERTY_STRING_NAME  [":" ENTITY_PROPERTY_DEFAULT  [ ":"  ENTITY_PROPERTY_DESCRIPTION]] WS?
 ENTITY_PROPERTY_STRING_NAME :  WS? STRING WS?
 ENTITY_PROPERTY_DEFAULT : (WS | (WS? (VALIDNAME | VECTOR | STRING)))   WS?
 ENTITY_PROPERTY_DESCRIPTION :  WS? STRING WS?
 
-entity_property_name_and_type : WS? ENTITY_PROPERTY_NAME"("ENTITY_PROPERTY_TYPE")" WS?
+entity_property_name_and_type : WS? ENTITY_PROPERTY_NAME"("ENTITY_PROPERTY_TYPE")" WS? [READONLY]
 ENTITY_PROPERTY_NAME : WS? VALIDNAME WS?
 ENTITY_PROPERTY_TYPE : VALIDNAME
 
-entity_input : "input " entity_property_name_and_type ["readonly"] WS? [":" ENTITY_PROPERTY_DESCRIPTION]
-entity_output : "output" entity_property_name_and_type ["readonly"] WS? [":" ENTITY_PROPERTY_DESCRIPTION]
+entity_input : "input " entity_property_name_and_type WS? [":" ENTITY_PROPERTY_DESCRIPTION]
+entity_output : "output" entity_property_name_and_type  WS? [":" ENTITY_PROPERTY_DESCRIPTION]
 
 entity_property_choices : entity_property_normal WS? "=" WS? "[" WS? (entity_property_choice_option WS?)+ WS? "]"
 entity_property_choice_option : (VALIDNAME | STRING) WS? ":" ENTITY_PROPERTY_STRING_NAME WS?
 
-entity_property_flags : entity_property_name_and_type ["readonly"] WS? "=" WS? "[" WS? (entity_flag_option WS?)+ WS? "]"
+entity_property_flags : entity_property_name_and_type  WS? "=" WS? "[" WS? (entity_flag_option WS?)+ WS? "]"
 entity_flag_option : SIGNED_NUMBER WS? ":" WS? ENTITY_PROPERTY_STRING_NAME WS? ":" WS? /[01]/
 
 

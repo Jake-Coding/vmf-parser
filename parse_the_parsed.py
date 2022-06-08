@@ -57,6 +57,7 @@ class TransformToPyClass(visitors.Transformer):
     BASECLASS = VALIDNAME
     ENTITY_PROPERTY_DESCRIPTION = STRING
     ENTITY_PROPERTY_STRING_NAME = STRING
+    READONLY = STRING
 
     def __default_token__(self, token : Token):
         # print(token)
@@ -214,7 +215,7 @@ class TransformToPyClass(visitors.Transformer):
             # print(init_string)
 
             getters = self._make_getters(needed_properties)
-            print(getters)
+            # print(getters)
 
             setters = self._make_setters(needed_properties)
 
@@ -309,12 +310,15 @@ class TransformToPyClass(visitors.Transformer):
             string += "UNIQUE PROPERTIES"
             for unique_needed_property in needed_properties["unique"]:
                 # print(unique_needed_property)
-                property_string = self._make_type_hinted_property_var_name(unique_needed_property)
-                property_string += f"({unique_needed_property['type']}) : "
+                property_string = ""
+                if unique_needed_property["readonly"]:
+                    property_string += "READONLY "
+                property_string += self._make_type_hinted_property_var_name(unique_needed_property)
+                property_string += f"({unique_needed_property['type']}) | "
                 if unique_needed_property.get("str_name"):
                     property_string += f"{unique_needed_property['str_name']}"
-                if unique_needed_property.get("default") is not None:
-                    property_string += f"\n\tDEFAULT: {unique_needed_property['default'].value}"
+                if unique_needed_property.get("default"):
+                    property_string += f"\n\tDEFAULT: {unique_needed_property['default']}"
                 if unique_needed_property.get("description"):
                     property_string += f"\n\t{unique_needed_property['description']}"
 
@@ -450,7 +454,12 @@ class TransformToPyClass(visitors.Transformer):
         }
 
     def entity_property_name_and_type(self, args):
-        return {"name" : args[0], "type" : args[1], "recommended_type" : TransformToPyClass.known_types.get(args[1])}
+        # print(args)
+        return {"name" : args[0],
+                "type" : args[1],
+                "recommended_type" : TransformToPyClass.known_types.get(args[1]),
+                "readonly" : bool(args[2])
+                }
 
     def entity_property_normal(self, args):
         # print(args[1])
