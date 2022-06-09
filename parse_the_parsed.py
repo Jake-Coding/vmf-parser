@@ -21,13 +21,16 @@ class TransformToPyClass(visitors.Transformer):
         "integer" : int,
         "float" : float,
         "boolean" : bool,
-        "angle" : list[float],
-        "color255" : list[float],
-        "color1" : list[float],
-        "vector" : list[float],
+        "angle" : list,
+        "color255" : list,
+        "color1" : list,
+        "vector" : list,
+        "color" : list,
         "target_destination" : str,
         "target_name_or_class" : str,
         "target_source" : str,
+        "flags" : dict,
+
     }
 
 
@@ -37,16 +40,19 @@ class TransformToPyClass(visitors.Transformer):
     def fix_str(string):
 
         fixed_ish =  string.strip().strip("'").strip('"')
+        fixed_ish = fixed_ish.replace(">", "")
+        fixed_ish = fixed_ish.replace("<", "")
+        fixed_ish = fixed_ish.replace("!", "")
         if fixed_ish in [":"]:
             return None
         if len(fixed_ish.split(" ")) > 2:
             try:
-                return [int(v) if float(v).is_integer() else float(v) for v in fixed_ish.split(" ")]
+                return TransformToPyClass.to_vec(fixed_ish)
             except:
                 return fixed_ish
         return fixed_ish
 
-    VECTOR = lambda arg1, arg2 : Token(arg2.type, [int(v) if float(v).is_integer() else float(v) for v in arg2.split(" ") ])
+    VECTOR = lambda arg1, arg2 : Token(arg2.type, TransformToPyClass.to_vec(arg2) )
     COLOR = VECTOR
     ALPHANUM = fix_str
     VALIDNAME = fix_str
@@ -58,6 +64,10 @@ class TransformToPyClass(visitors.Transformer):
     ENTITY_PROPERTY_DESCRIPTION = STRING
     ENTITY_PROPERTY_STRING_NAME = STRING
     READONLY = STRING
+
+    @staticmethod
+    def to_vec(string : str):
+        return [int(v) if float(v).is_integer() else float(v) for v in string.split(" ")]
 
     def __default_token__(self, token : Token):
         # print(token)
@@ -121,7 +131,6 @@ class TransformToPyClass(visitors.Transformer):
 
 
     def description(self, args):
-        # print(args)
         fixed =  TransformToPyClass.fix_str(args[0])
         if fixed:
             return fixed
@@ -173,6 +182,39 @@ class TransformToPyClass(visitors.Transformer):
                 return fgd_class_
         return None
 
+    def _clean_inheritance_helper(self, classname, classes):
+        # print(class_inheritance)
+        # print(self.get_class_by_name(classname, classes)[1]["base"])
+        if not self.get_class_by_name(classname, classes)[1]["base"]:
+            # print("guh")
+            # print(classname)
+            yield classname
+        else:
+            yield from (self._clean_inheritance_helper(v, classes) for v in self.get_class_by_name(classname, classes)[1]["base"])
+
+    def _clean_inheritance(self, class_inheritance_section ,classes):
+        if not class_inheritance_section:
+            return []
+        inherits: list = class_inheritance_section["base"]
+        removed = False
+        for v in inherits:
+            v2 = self.get_class_by_name(v, classes)
+            if v2[1]["base"]:
+                for v3 in v2[1]["base"]:
+                    for bad_inherit in self._clean_inheritance_helper(v3, classes):
+                        if bad_inherit in inherits:
+                            inherits.remove(bad_inherit)
+                            removed = True
+                            break
+        class_inheritance_section["base"] = inherits
+        if removed:
+            # print(class_inheritance_section)
+            return self._clean_inheritance(class_inheritance_section, classes)
+        # print()
+        return class_inheritance_section
+
+
+
     def fgd(self, big_tree : list):
         # print(big_tree)
 
@@ -189,6 +231,7 @@ class TransformToPyClass(visitors.Transformer):
                     yield from extract_nested_values(value)
 
 
+        fgd_class_strings = []
         for fgd_class_ in fgd_classes:
 
             needed_properties = {"for_super": [], "unique":[]}
@@ -199,26 +242,67 @@ class TransformToPyClass(visitors.Transformer):
             ent_name = TransformToPyClass._get_entity_name(ent)
             # print(ent_desc)
             big_properties_dict = self._get_properties(fgd_class_, fgd_classes)
-                    # MAKE RECURSIVELY INHERIT
             needed_properties["unique"] = big_properties_dict["props"]
 
             b = big_properties_dict
             b["props"] = []
-
             needed_properties["for_super"] = list(extract_nested_values(b))
-
+            init_super_call = []
             # print(needed_properties)
+            for p in needed_properties["for_super"]:
+                init_super_call.append(p["name"])
+            print([p['name'].value for p in needed_properties["for_super"]])
+
+            inherits = inheritance["base"]
+            inheritance_string = ""
+            if inherits:
+                inherits = self._clean_inheritance(inheritance, fgd_classes)
+                inheritance_string = ", ".join(inherits["base"])
+
+
+
+            for p in needed_properties["unique"]: # clear out duplicates
+                p_name = p['name']
+                needed_properties["for_super"] = list(filter(lambda v : v['name'] != p_name, needed_properties["for_super"]))
+
+            reversed_good_super = needed_properties["for_super"][::-1]
+            reversed_good_super = [i for n, i in enumerate(reversed_good_super) if i['name'].value not in [v['name'].value for v in reversed_good_super[:n]]]
+
+            needed_properties["for_super"] = reversed_good_super[::-1]
             docstring = self._make_docstring(ent_desc, inheritance, needed_properties)
             # print(docstring)
 
-            init_string = self._make_init(needed_properties)
+            init_string = self._make_init(needed_properties, init_super_call)
             # print(init_string)
 
             getters = self._make_getters(needed_properties)
             # print(getters)
 
             setters = self._make_setters(needed_properties)
+            # print(setters)
 
+            flag_functions = self._make_flag_functions(needed_properties)
+            # print(flag_functions)
+
+            inner_class_str = docstring + "\n" + init_string + "\n" + getters + "\n" + setters + "\n" + flag_functions
+
+            class_str = f"class {ent_name}({inheritance_string}):\n{indent(inner_class_str)}" + "\n"
+            fgd_class_strings.append(class_str)
+
+        return fgd_class_strings
+
+    def _make_flag_functions(self, needed_properties : dict):
+        flag_funcs = []
+        for p in needed_properties["unique"]:
+            if p['type'] == "flags":
+                flag_funcs.append(self._make_toggle_flag_func(p))
+        return "\n\n".join(flag_funcs)
+
+    def _make_toggle_flag_func(self, property_ : dict):
+        string = f"def toggle_{property_['name']}_flag(self, flag_num : int):\n"
+        inner_string = f"assert((flag_num) in {[int(list(v.keys())[0]) for v in property_['flags']]})\n"
+        inner_string += f"self.{property_['name']}[flag_num] = not self.{property_['name']}[flag_num]\n"
+        return string + indent(inner_string)
 
     def _make_setters(self, needed_properties : dict):
         setters = []
@@ -227,8 +311,19 @@ class TransformToPyClass(visitors.Transformer):
         return "\n\n".join(setters)
 
     def _make_setter(self, property_ : dict):
-        return "this settin"
-        pass #TODO this shit
+        string = f"def set_{property_['name']}(self, {self._make_type_hinted_property_var_name(property_)}):\n"
+        inner_string = ""
+        if property_["readonly"] or property_['type'] == "flags":
+            return ""
+
+        if property_["type"] == "choices":
+            inner_string += f"assert(str({property_['name']}) in {[str(list(v.keys())[0]) for v in property_['choices']]})\n"
+            inner_string += f"self.{property_['name']} = {property_['name']}\n"
+        else:
+            inner_string += f"self.{property_['name']} = {property_['name']}\n"
+
+        return string + indent(inner_string)
+
 
     def _make_getters(self, needed_properties : dict):
         # inherit super getters from parent
@@ -238,9 +333,10 @@ class TransformToPyClass(visitors.Transformer):
         return "\n\n".join(getters)
 
     def _make_getter(self, property_ : dict):
-        string = f"def get_{property_['name']}():"
+        string = f"def get_{property_['name']}(self)"
         if property_.get('recommended_type'):
             string += f" -> {property_['recommended_type'].__name__}"
+        string += ":"
         string += "\n"
         string += indent(f"return self.{property_['name']}")
 
@@ -250,18 +346,21 @@ class TransformToPyClass(visitors.Transformer):
 
 
 
-    def _make_init(self, needed_properties : dict):
+    def _make_init(self, needed_properties : dict, super_call : list):
         signature = self._make_init_signature(needed_properties)
         # print(signature)
-        super_call = []
-        for p in needed_properties["for_super"]:
-            super_call.append(p["name"])
 
         unique_property_inits = []
         for p in needed_properties["unique"]:
             property_starting_string = f"self.{p['name']} = {p['name']}\n"
             if p.get('default'):
-                property_starting_string += f"if {p['name']} is None:\n\tself.{p['name']} = {p['default']}\n"
+                property_starting_string += f"if {p['name']} is None:\n\t"
+                if not p["recommended_type"]:
+                    property_starting_string += f"self.{p['name']} = \"{str(p['default'])}\"\n"
+
+                else:
+                    property_starting_string += f"self.{p['name']} = {p['default']}\n"
+
 
             unique_property_inits.append(property_starting_string)
 
@@ -361,6 +460,7 @@ class TransformToPyClass(visitors.Transformer):
 
         for prop in (class_[2].find_data("entity_property")):
             property_dict["props"].append(prop.children[0])
+
 
         return property_dict
 
@@ -462,12 +562,28 @@ class TransformToPyClass(visitors.Transformer):
                 }
 
     def entity_property_normal(self, args):
+        # if args[0]['name'] in ["linedivider_base"]:
+        #     return self.discard
         # print(args[1])
+        default = args[2]
+        if type(args[2]) == Token:
+            default = args[2].value
         ent_specifc_data = {
             "str_name" : args[1],
-            "default" : args[2],
+            "default" : default,
             "description" : args[3],
         }
+
+        # print(args[0]["recommended_type"])
+        if args[0]["recommended_type"] == list and not isinstance(ent_specifc_data['default'], list):
+            # print(type(args[2]))
+            # print(default)
+            # print("hi")
+            if ent_specifc_data['default']:
+                ent_specifc_data['default'] = TransformToPyClass.to_vec(ent_specifc_data['default'])
+        elif args[0]["recommended_type"] == bool and not isinstance(ent_specifc_data['default'], bool):
+            if ent_specifc_data['default']:
+                ent_specifc_data['default'] = bool(ent_specifc_data['default'])
         # print(args[2])
         return args[0] | ent_specifc_data
 
@@ -503,7 +619,11 @@ class TransformToPyClass(visitors.Transformer):
 
 try:
     transformed = (TransformToPyClass().transform(the_tree))
-    # print(transformed.pretty())
+    with open("momentum.py", "w") as f:
+        for t in transformed:
+            f.write(t)
+            f.write("\n")
+    # print(transformed)
 except visitors.VisitError as e:
     raise e.orig_exc
 
