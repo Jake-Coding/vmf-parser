@@ -54,7 +54,7 @@ other_kv.-1 : VMF_SZ VMF_SZ // lowest priority (.-1) but can go lower if need
 
 // common non-kvs
 solid : "solid" "{" id side+ editor "}"
-side : "side" "{" id plane [point_data] material uaxis vaxis rotation lightmapscale smoothing_groups [dispinfo] [other_kv*] "}"
+side : "side" "{" id plane (point_data)? material uaxis vaxis rotation lightmapscale smoothing_groups (dispinfo)? (other_kv*)? "}"
 point_data : "point_data" "{" point_data_inner "}"
 point_data_inner : numpts point*
 
@@ -71,8 +71,8 @@ group : "group" "{" id editor "}"
 
 other_class : validname "{" (other_kv | other_class)* "}"
 
-section : [versioninfo]
-          | visgroups+
+section : versioninfo
+          | visgroups
           | viewsettings
           | world
           | entity
@@ -93,7 +93,7 @@ prefab: "\"prefab\" " vmf_qbool
 
 // visgroup stuff :))
 visgroups : "visgroups" "{" visgroup* "}"
-visgroup : "visgroup" "{" name visgroupid color [visgroup+] "}"
+visgroup : "visgroup" "{" name visgroupid color (visgroup+)? "}"
 visgroupid : "\"visgroupid\"" vmf_qint
 
 // viewsettings stuff
@@ -115,9 +115,9 @@ zoom : "\"zoom\"" vmf_qdec
 
 // world stuff
 world : "world" "{" world_inner "}"
-world_inner : world_kvs [solid*] [hidden*] [group*]
+world_inner : world_kvs solid* hidden* group*
 
-world_kvs : id mapversion CLASSNAME_WORLDSPAWN [other_kv*]
+world_kvs : id mapversion CLASSNAME_WORLDSPAWN (other_kv*)?
 CLASSNAME_WORLDSPAWN : "\"classname\" \"worldspawn\""
 
 // entity stuff
@@ -126,10 +126,10 @@ entity : "entity" "{" entity_inner "}"
 entity_inner : entity_kvs entity_nonkvs
 entity_kvs : (id | classname | spawnflags | origin | other_kv)+
 
-entity_nonkvs : (solid* | connections | hidden)* editor
+entity_nonkvs : (solid | connections | hidden)* editor
 connections : "connections" "{" connection* "}"
 connection : vmf_sz_rule "\"" connection_value "\""
-connection_value : ent_name_or_class "," input "," override  delay ["," num_times_fire] // test override (does it take the , char??)
+connection_value : ent_name_or_class "," input "," override  delay ["," num_times_fire]
 ent_name_or_class : validname
 input : validname
 override : "," | (/.+?(?=,)/ ",")
