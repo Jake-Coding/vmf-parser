@@ -1,0 +1,81 @@
+vmf : (section)*
+
+
+// Basic types
+VMF_SZ : /".*?(?=")"/
+VMF_INT : SIGNED_INT
+VMF_DEC : SIGNED_NUMBER
+VMF_BOOL : "0" | "1"
+VMF_VERTEX : VMF_DEC " " VMF_DEC " " VMF_DEC
+VMF_COLOR : VMF_INT " " VMF_INT " " VMF_INT
+COMMENT : /\/\/.*/
+
+// Most vertexes are like this, but some aren't. Thanks valve.
+vmf_pvertex : "(" VMF_VERTEX ")"
+
+// quoted versions of basic types. Most VMF stuff looks like "key" "value" so I'm defining it here
+vmf_qint : "\"" VMF_INT "\""
+vmf_qdec : "\"" VMF_DEC "\""
+vmf_qbool : "\"" VMF_BOOL "\""
+vmf_qpvertex : "\"" vmf_pvertex "\""
+vmf_qcolor : "\"" VMF_COLOR "\""
+
+
+
+
+// common stuff
+name : "\"name\"" VMF_SZ
+color : "\"color\"" vmf_qcolor
+position : "\"position\"" vmf_qpvertex
+angle : "\"angle\"" "\"[" VMF_VERTEX "]\""
+other_kv.-1 : VMF_SZ VMF_SZ // lowest priority (.-1) but can go lower if need
+
+
+section : [versioninfo]
+          | visgroups+
+          | viewsettings
+    //    | world
+      //  | entity
+        //| hidden
+        //| cameras
+        //| cordon
+        //| cordons
+
+// versioninfo stuff
+versioninfo : "versioninfo"  "{" versioninfo_inner "}"
+
+versioninfo_inner : editorversion editorbuild mapversion formatversion prefab
+editorversion :"\"editorversion\" " vmf_qint
+editorbuild: "\"editorbuild\" " vmf_qint
+mapversion : "\"mapversion\" " vmf_qint
+formatversion: "\"formatversion\" " vmf_qint
+prefab: "\"prefab\" " vmf_qbool
+
+// visgroup stuff :))
+visgroups : "visgroups" "{" visgroup* "}"
+visgroup : "visgroup" "{" name visgroupid color [visgroup+] "}"
+visgroupid : "\"visgroupid\"" vmf_qint
+
+// viewsettings stuff
+viewsettings : "viewsettings" "{" viewsettings_inner "}"
+viewsettings_inner : (views | viewsettings_kvs | other_kv)*
+viewsettings_kvs : bsnap | bshow | bshowl | ngrid | bshowthree
+bsnap : "\"bSnapToGrid\"" vmf_qbool
+bshow : "\"bShowGrid\"" vmf_qbool
+bshowl : "\"bShowLogicalGrid\"" vmf_qbool
+ngrid : "\"nGridSpacing\"" vmf_qint
+bshowthree : "\"bShow3DGrid\"" vmf_qbool
+
+views : "views" "{" view* "}"
+view : viewname "{" isthreed position (angle | zoom) "}"
+viewname : "v" VMF_INT
+isthreed : "\"3d\"" vmf_qbool
+zoom : "\"zoom\"" vmf_qdec
+
+
+
+
+%import common.WS
+%import common.SIGNED_NUMBER
+%import common.SIGNED_INT
+%ignore WS

@@ -3,7 +3,7 @@ import sys
 from lark import *
 
 the_tree : Tree
-with open("./fgd_tree.txt", "r") as f:
+with open("../fgd_tree.txt", "r") as f:
     the_tree = eval(f.read())
 
 
@@ -619,7 +619,7 @@ class TransformToPyClass(visitors.Transformer):
 
 try:
     transformed = (TransformToPyClass().transform(the_tree))
-    with open("momentum.py", "w") as f:
+    with open("./momentum.py", "w") as f:
         for t in transformed:
             f.write(t)
             f.write("\n")
