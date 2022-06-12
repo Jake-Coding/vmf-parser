@@ -11,5 +11,7 @@ print(parser)
 parsed = parser.parse(get_text("not_vmf.txt"))
 print(parsed)
 print(parsed.pretty())
-# with open("./vmf_tree.txt", "w") as f:
-#     f.write(parsed.__repr__())
+with open("./vmf_tree.txt", "w") as f:
+    f.write(parsed.__repr__())
+with open("./pretty_vmf_tree.txt", "w") as f:
+    f.write(parsed.pretty())

@@ -9,6 +9,8 @@ VMF_BOOL : "0" | "1"
 VMF_VERTEX : VMF_DEC " " VMF_DEC " " VMF_DEC
 VMF_COLOR : VMF_INT " " VMF_INT " " VMF_INT
 COMMENT : /\/\/.*/
+vmf_sz_rule : VMF_SZ
+validname : CNAME
 
 // Most vertexes are like this, but some aren't. Thanks valve.
 vmf_pvertex : "(" VMF_VERTEX ")"
@@ -19,27 +21,65 @@ vmf_qdec : "\"" VMF_DEC "\""
 vmf_qbool : "\"" VMF_BOOL "\""
 vmf_qpvertex : "\"" vmf_pvertex "\""
 vmf_qcolor : "\"" VMF_COLOR "\""
+vmf_qvertex : "\"" VMF_VERTEX "\""
 
 
 
 
-// common stuff
+// common kvs
 name : "\"name\"" VMF_SZ
+classname : "\"classname\"" VMF_SZ
 color : "\"color\"" vmf_qcolor
 position : "\"position\"" vmf_qpvertex
 angle : "\"angle\"" "\"[" VMF_VERTEX "]\""
+id : "\"id\"" vmf_qint
+plane : "\"plane\"" "\"" vmf_pvertex " " vmf_pvertex " " vmf_pvertex "\""
+material : "\"material\"" VMF_SZ
+rotation : "\"rotation\"" vmf_qdec
+uaxis : "\"uaxis\"" "\"" uvaxis_inner "\""
+vaxis : "\"vaxis\"" "\"" uvaxis_inner "\""
+uvaxis_inner : "[" VMF_VERTEX " " VMF_DEC "]" VMF_DEC
+lightmapscale : "\"lightmapscale\"" vmf_qint
+smoothing_groups : "\"smoothing_groups\"" vmf_qint
+numpts : "\"numpts\"" vmf_qint
+point : "\"point\"" "\"" VMF_INT " " VMF_VERTEX "\""
+spawnflags : "\"spawnflags\"" vmf_qint
+origin : "\"origin\"" vmf_qvertex
+
+
+
 other_kv.-1 : VMF_SZ VMF_SZ // lowest priority (.-1) but can go lower if need
 
+
+
+// common non-kvs
+solid : "solid" "{" id side+ editor "}"
+side : "side" "{" id plane [point_data] material uaxis vaxis rotation lightmapscale smoothing_groups [dispinfo] [other_kv*] "}"
+point_data : "point_data" "{" point_data_inner "}"
+point_data_inner : numpts point*
+
+
+dispinfo : "dispinfo" "{" dispinfo_inner "}"
+dispinfo_inner : other_kv* other_class*
+
+
+editor : "editor" "{" editor_inner "}"
+editor_inner : other_kv*
+
+group : "group" "{" id editor "}"
+
+
+other_class : validname "{" (other_kv | other_class)* "}"
 
 section : [versioninfo]
           | visgroups+
           | viewsettings
-    //    | world
-      //  | entity
-        //| hidden
-        //| cameras
-        //| cordon
-        //| cordons
+          | world
+          | entity
+          | hidden
+          | cameras
+          | cordon_old
+          | cordons
 
 // versioninfo stuff
 versioninfo : "versioninfo"  "{" versioninfo_inner "}"
@@ -73,9 +113,54 @@ isthreed : "\"3d\"" vmf_qbool
 zoom : "\"zoom\"" vmf_qdec
 
 
+// world stuff
+world : "world" "{" world_inner "}"
+world_inner : world_kvs [solid*] [hidden*] [group*]
+
+world_kvs : id mapversion CLASSNAME_WORLDSPAWN [other_kv*]
+CLASSNAME_WORLDSPAWN : "\"classname\" \"worldspawn\""
+
+// entity stuff
+entity : "entity" "{" entity_inner "}"
+
+entity_inner : entity_kvs entity_nonkvs
+entity_kvs : (id | classname | spawnflags | origin | other_kv)+
+
+entity_nonkvs : (solid* | connections | hidden)* editor
+connections : "connections" "{" connection* "}"
+connection : vmf_sz_rule "\"" connection_value "\""
+connection_value : ent_name_or_class "," input "," override  delay ["," num_times_fire] // test override (does it take the , char??)
+ent_name_or_class : validname
+input : validname
+override : "," | (/.+?(?=,)/ ",")
+delay : VMF_DEC
+num_times_fire : VMF_INT
+
+
+// hidden stuff
+hidden : "hidden" "{" (solid* | entity*) "}"
+
+// cameras stuff
+cameras : "cameras" "{" (other_class | other_kv)* "}"
+
+// general cordon stuff
+mins : "\"mins\"" vmf_qpvertex
+maxs : "\"maxs\"" vmf_qpvertex
+active : "\"active\"" vmf_qbool
+
+// old cordon stuff
+cordon_old : "cordon" "{" (mins | maxs | active) ~ 3 "}"
+
+// new cordon stuff
+cordons : "cordons" "{" active cordon_new* "}"
+cordon_new : "cordon" "{" name active box "}"
+box : "box" "{" mins maxs "}"
+
+
 
 
 %import common.WS
 %import common.SIGNED_NUMBER
 %import common.SIGNED_INT
+%import common.CNAME
 %ignore WS
