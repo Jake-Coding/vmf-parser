@@ -8,7 +8,7 @@ def get_text(filename : str) ->str:
 parser = lark.Lark(get_text("./vmf_parser_generator.lark"), start="vmf")
 
 print(parser)
-parsed = parser.parse(get_text("not_vmf.txt"))
+parsed = parser.parse(get_text("jump_cyskic_final_d.vmf"))
 print(parsed)
 print(parsed.pretty())
 with open("./vmf_tree.txt", "w") as f:

@@ -10,7 +10,9 @@ VMF_VERTEX : VMF_DEC " " VMF_DEC " " VMF_DEC
 VMF_COLOR : VMF_INT " " VMF_INT " " VMF_INT
 COMMENT : /\/\/.*/
 vmf_sz_rule : VMF_SZ
-validname : CNAME
+validname : (CNAME | "!")+
+VALIDNAME : (CNAME | "!")+
+
 
 // Most vertexes are like this, but some aren't. Thanks valve.
 vmf_pvertex : "(" VMF_VERTEX ")"
@@ -60,7 +62,7 @@ point_data_inner : numpts point*
 
 
 dispinfo : "dispinfo" "{" dispinfo_inner "}"
-dispinfo_inner : other_kv* other_class*
+dispinfo_inner : (other_kv | other_class)*
 
 
 editor : "editor" "{" editor_inner "}"
@@ -123,16 +125,16 @@ CLASSNAME_WORLDSPAWN : "\"classname\" \"worldspawn\""
 // entity stuff
 entity : "entity" "{" entity_inner "}"
 
-entity_inner : entity_kvs entity_nonkvs
+entity_inner : (entity_kvs | entity_nonkvs)+
 entity_kvs : (id | classname | spawnflags | origin | other_kv)+
 
-entity_nonkvs : (solid | connections | hidden)* editor
+entity_nonkvs : (solid | connections | hidden | editor)+
 connections : "connections" "{" connection* "}"
 connection : vmf_sz_rule "\"" connection_value "\""
-connection_value : ent_name_or_class "," input "," override  delay ["," num_times_fire]
-ent_name_or_class : validname
-input : validname
-override : "," | (/.+?(?=,)/ ",")
+connection_value : ent_name_or_class (","|"") input (","|"") override  delay [(","|"") num_times_fire]
+ent_name_or_class : VALIDNAME
+input : VALIDNAME
+override : (","|"") | (/.+?(?=,|)/ (","|""))
 delay : VMF_DEC
 num_times_fire : VMF_INT
 
