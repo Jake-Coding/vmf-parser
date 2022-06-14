@@ -8,25 +8,35 @@ def get_parser(filename : str):
         parser_data = f.read()
     parser = lark.Lark(parser_data,
                        start="vmf",
-                       parser="earley"
+                       parser="lalr",
                        )
     print(parser)
     return parser
 
 if __name__ == "__main__":
+
+    transformer = TransformVMF()
     parser = get_parser("vmf_parser_generator.lark")
     text : str
     with open("jump_cyskic_final_d.vmf", "r") as f:
         text = f.read()
     print("text read")
-    parsed = parser.parse(text)
+
+    parsed : lark.Tree
+    try:
+        parsed = parser.parse(text)
+    except lark.exceptions.UnexpectedToken as e:
+        print(e)
+        print(e.get_context(text, 40))
+
     print("text parsed")
-    transformer = TransformVMF()
     transformed = transformer.transform(parsed)
     print("parsed transformed")
     rj_map = to_mmod.to_mmod_rj(transformed)
     print("transformed to mmod")
     rj_vmf = py_to_vmf.py_to_vmf_str(rj_map)
     print("back to vmf string :)")
-    print(rj_vmf)
+    with open("rj_cyskic_final_d.vmf", "w") as f:
+        f.write(rj_vmf)
+    print("written to file")
 

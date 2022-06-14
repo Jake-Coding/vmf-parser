@@ -2,16 +2,16 @@ vmf : (section)*
 
 
 // Basic types
-VMF_SZ : /".*?(?=")"/
-VMF_INT : SIGNED_INT
-VMF_DEC : SIGNED_NUMBER
-VMF_BOOL : "0" | "1"
-VMF_VERTEX : VMF_DEC " " VMF_DEC " " VMF_DEC
-VMF_COLOR : VMF_INT " " VMF_INT " " VMF_INT
+VMF_SZ.-1 : /".*?(?=")"/
+VMF_INT.2 : SIGNED_INT
+VMF_DEC.1 : SIGNED_NUMBER
+VMF_BOOL.0 : "0" | "1"
+VMF_VERTEX.5 : VMF_DEC " " VMF_DEC " " VMF_DEC
+VMF_COLOR.4 : VMF_INT " " VMF_INT " " VMF_INT
 COMMENT : /\/\/.*/
 vmf_sz_rule : VMF_SZ
 validname : (CNAME | "!")+
-VALIDNAME : (CNAME | "!")+
+VALIDNAME.1 : (CNAME | "!")+
 
 
 // Most vertexes are like this, but some aren't. Thanks valve.
@@ -35,16 +35,16 @@ color : "\"color\"" vmf_qcolor
 position : "\"position\"" vmf_qpvertex
 angle : "\"angle\"" "\"[" VMF_VERTEX "]\""
 id : "\"id\"" vmf_qint
-plane : "\"plane\"" "\"" vmf_pvertex " " vmf_pvertex " " vmf_pvertex "\""
+plane : "\"plane\"" "\"" vmf_pvertex  vmf_pvertex  vmf_pvertex "\""
 material : "\"material\"" VMF_SZ
 rotation : "\"rotation\"" vmf_qdec
 uaxis : "\"uaxis\"" "\"" uvaxis_inner "\""
 vaxis : "\"vaxis\"" "\"" uvaxis_inner "\""
-uvaxis_inner : "[" VMF_VERTEX " " VMF_DEC "]" VMF_DEC
+uvaxis_inner : "[" VMF_VERTEX  VMF_DEC "]" VMF_DEC
 lightmapscale : "\"lightmapscale\"" vmf_qint
 smoothing_groups : "\"smoothing_groups\"" vmf_qint
 numpts : "\"numpts\"" vmf_qint
-point : "\"point\"" "\"" VMF_INT " " VMF_VERTEX "\""
+point : "\"point\"" "\"" VMF_INT  VMF_VERTEX "\""
 spawnflags : "\"spawnflags\"" vmf_qint
 origin : "\"origin\"" vmf_qvertex
 
@@ -71,7 +71,7 @@ editor_inner : other_kv*
 group : "group" "{" id editor "}"
 
 
-other_class : validname "{" (other_kv | other_class)* "}"
+other_class.-1 : validname "{" (other_kv | other_class)* "}"
 
 section : versioninfo
           | visgroups
@@ -96,7 +96,7 @@ prefab: "\"prefab\" " vmf_qbool
 // visgroup stuff :))
 visgroups : "visgroups" "{" visgroup* "}"
 visgroup : "visgroup" "{" name visgroupid color (visgroup+)? "}"
-visgroupid : "\"visgroupid\"" vmf_qint
+visgroupid : "\"visgroupid\" " vmf_qint
 
 // viewsettings stuff
 viewsettings : "viewsettings" "{" viewsettings_inner "}"
