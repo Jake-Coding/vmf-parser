@@ -1,11 +1,7 @@
-import sys
 import pprint
 
 from lark import *
 
-the_tree : Tree
-with open("./vmf_tree.txt", "r") as f:
-    the_tree = eval(f.read())
 
 
 class TransformVMF(visitors.Transformer):
@@ -130,8 +126,7 @@ class TransformVMF(visitors.Transformer):
 
             # print(class_dict)
             else:
-                print("something has gone horribly wrong")
-                print(children)
+                raise Exception("oops")
 
 
 
@@ -140,7 +135,6 @@ class TransformVMF(visitors.Transformer):
     def other_kv(self, data):
         value = data[1]
         value = TransformVMF.try_to_convert(value)
-        print(value)
         return {data[0].lower() : value}
 
     def uvaxis_inner(self, data):
@@ -223,7 +217,6 @@ class TransformVMF(visitors.Transformer):
 
     def viewsettings_inner(self, data):
         c = {"type" : "class", "classtype" : "viewsettings", "kvs" :{}, "classes" : []}
-        print(data)
         for d in data:
             if d.get("type") == "class":
                 c["classes"].append(d)
@@ -342,19 +335,24 @@ class TransformVMF(visitors.Transformer):
 
 
 
-try:
-    transformed = (TransformVMF().transform(the_tree))
-    pp = pprint.PrettyPrinter(sort_dicts=False, indent=4, width=140)
+if __name__ == "__main__":
 
-    # print(transformed)
-    with open("./transformed_into_py.txt", "w") as f:
-        f.write(transformed.__repr__())
-    with open("./transformed_pretty.txt", "w") as f:
-        f.write(pp.pformat(transformed))
-    # for entity in transformed["entity"]:
-    #
-    #     if entity["kvs"]["classname"] == "trigger_catapult":
-    #         pass
-            # pp.pprint(entity)
-except visitors.VisitError as e:
-    raise e.orig_exc
+    the_tree: Tree
+    with open("./vmf_tree.txt", "r") as f:
+        the_tree = eval(f.read())
+    try:
+        transformed = (TransformVMF().transform(the_tree))
+        pp = pprint.PrettyPrinter(sort_dicts=False, indent=4, width=140)
+
+        # print(transformed)
+        with open("./transformed_into_py.txt", "w") as f:
+            f.write(transformed.__repr__())
+        with open("./transformed_pretty.txt", "w") as f:
+            f.write(pp.pformat(transformed))
+        # for entity in transformed["entity"]:
+        #
+        #     if entity["kvs"]["classname"] == "trigger_catapult":
+        #         pass
+                # pp.pprint(entity)
+    except visitors.VisitError as e:
+        raise e.orig_exc
