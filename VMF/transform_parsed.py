@@ -113,6 +113,7 @@ class TransformVMF(visitors.Transformer):
             return self.zero_depth_rule(TransformVMF.zero_depth_keys[data], children)
 
         # print(data.value)
+        # print(data)
         class_ = {"type": "class" , "classtype" : data.value.lower(), "kvs" : {}, "classes" : []}
         for child in children:
             if type(child) == dict:
