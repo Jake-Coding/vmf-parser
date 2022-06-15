@@ -1,0 +1,168 @@
+vmf : (section)*
+
+
+// Basic types
+VMF_SZ.-1 : /".*?(?=")"/
+VMF_INT.2 : SIGNED_INT
+VMF_DEC.1 : SIGNED_NUMBER
+VMF_BOOL.0 : "0" | "1"
+VMF_VERTEX.5 : VMF_DEC " " VMF_DEC " " VMF_DEC
+VMF_COLOR.4 : VMF_INT " " VMF_INT " " VMF_INT
+COMMENT : /\/\/.*/
+vmf_sz_rule : VMF_SZ
+validname : (CNAME | "!")+
+VALIDNAME.1 : (CNAME | "!")+
+
+
+// Most vertexes are like this, but some aren't. Thanks valve.
+vmf_pvertex : "(" VMF_VERTEX ")"
+
+// quoted versions of basic types. Most VMF stuff looks like "key" "value" so I'm defining it here
+vmf_qint : "\"" VMF_INT "\""
+vmf_qdec : "\"" VMF_DEC "\""
+vmf_qbool : "\"" VMF_BOOL "\""
+vmf_qpvertex : "\"" vmf_pvertex "\""
+vmf_qcolor : "\"" VMF_COLOR "\""
+vmf_qvertex : "\"" VMF_VERTEX "\""
+
+
+
+
+// common kvs
+name : "\"name\"" VMF_SZ
+classname : "\"classname\"" VMF_SZ
+color : "\"color\"" vmf_qcolor
+position : "\"position\"" vmf_qpvertex
+angle : "\"angle\"" "\"[" VMF_VERTEX "]\""
+id : "\"id\"" vmf_qint
+plane : "\"plane\"" "\"" vmf_pvertex  vmf_pvertex  vmf_pvertex "\""
+material : "\"material\"" VMF_SZ
+rotation : "\"rotation\"" vmf_qdec
+uaxis : "\"uaxis\"" "\"" uvaxis_inner "\""
+vaxis : "\"vaxis\"" "\"" uvaxis_inner "\""
+uvaxis_inner : "[" VMF_VERTEX  VMF_DEC "]" VMF_DEC
+lightmapscale : "\"lightmapscale\"" vmf_qint
+smoothing_groups : "\"smoothing_groups\"" vmf_qint
+numpts : "\"numpts\"" vmf_qint
+point : "\"point\"" "\"" VMF_INT  VMF_VERTEX "\""
+spawnflags : "\"spawnflags\"" vmf_qint
+origin : "\"origin\"" vmf_qvertex
+
+
+
+other_kv.-1 : VMF_SZ VMF_SZ // lowest priority (.-1) but can go lower if need
+
+
+
+// common non-kvs
+solid : "solid" "{" id side+ editor "}"
+side : "side" "{" id plane (point_data)? material uaxis vaxis rotation lightmapscale smoothing_groups (dispinfo)? (other_kv*)? "}"
+point_data : "point_data" "{" point_data_inner "}"
+point_data_inner : numpts point*
+
+
+dispinfo : "dispinfo" "{" dispinfo_inner "}"
+dispinfo_inner : (other_kv | other_class)*
+
+
+editor : "editor" "{" editor_inner "}"
+editor_inner : other_kv*
+
+group : "group" "{" id editor "}"
+
+
+other_class.-1 : validname "{" (other_kv | other_class)* "}"
+
+section : versioninfo
+          | visgroups
+          | viewsettings
+          | world
+          | entity
+          | hidden
+          | cameras
+          | cordon_old
+          | cordons
+
+// versioninfo stuff
+versioninfo : "versioninfo"  "{" versioninfo_inner "}"
+
+versioninfo_inner : editorversion editorbuild mapversion formatversion prefab
+editorversion :"\"editorversion\" " vmf_qint
+editorbuild: "\"editorbuild\" " vmf_qint
+mapversion : "\"mapversion\" " vmf_qint
+formatversion: "\"formatversion\" " vmf_qint
+prefab: "\"prefab\" " vmf_qbool
+
+// visgroup stuff :))
+visgroups : "visgroups" "{" visgroup* "}"
+visgroup : "visgroup" "{" name visgroupid color (visgroup+)? "}"
+visgroupid : "\"visgroupid\" " vmf_qint
+
+// viewsettings stuff
+viewsettings : "viewsettings" "{" viewsettings_inner "}"
+viewsettings_inner : (views | viewsettings_kvs | other_kv)*
+viewsettings_kvs : bsnap | bshow | bshowl | ngrid | bshowthree
+bsnap : "\"bSnapToGrid\"" vmf_qbool
+bshow : "\"bShowGrid\"" vmf_qbool
+bshowl : "\"bShowLogicalGrid\"" vmf_qbool
+ngrid : "\"nGridSpacing\"" vmf_qint
+bshowthree : "\"bShow3DGrid\"" vmf_qbool
+
+views : "views" "{" view* "}"
+view : viewname "{" isthreed position (angle | zoom) "}"
+viewname : "v" VMF_INT
+isthreed : "\"3d\"" vmf_qbool
+zoom : "\"zoom\"" vmf_qdec
+
+
+// world stuff
+world : "world" "{" world_inner "}"
+world_inner : world_kvs solid* hidden* group*
+
+world_kvs : id mapversion CLASSNAME_WORLDSPAWN (other_kv*)?
+CLASSNAME_WORLDSPAWN : "\"classname\" \"worldspawn\""
+
+// entity stuff
+entity : "entity" "{" entity_inner "}"
+
+entity_inner : (entity_kvs | entity_nonkvs)+
+entity_kvs : (id | classname | spawnflags | origin | other_kv)+
+
+entity_nonkvs : (solid | connections | hidden | editor)+
+connections : "connections" "{" connection* "}"
+connection : vmf_sz_rule "\"" connection_value "\""
+connection_value : ent_name_or_class (","|"") input (","|"") override  delay [(","|"") num_times_fire]
+ent_name_or_class : VALIDNAME
+input : VALIDNAME
+override : (","|"") | (/.+?(?=,|)/ (","|""))
+delay : VMF_DEC
+num_times_fire : VMF_INT
+
+
+// hidden stuff
+hidden : "hidden" "{" (solid* | entity*) "}"
+
+// cameras stuff
+cameras : "cameras" "{" (other_class | other_kv)* "}"
+
+// general cordon stuff
+mins : "\"mins\"" vmf_qpvertex
+maxs : "\"maxs\"" vmf_qpvertex
+active : "\"active\"" vmf_qbool
+
+// old cordon stuff
+cordon_old : "cordon" "{" (mins | maxs | active) ~ 3 "}"
+
+// new cordon stuff
+cordons : "cordons" "{" active cordon_new* "}"
+cordon_new : "cordon" "{" name active box "}"
+box : "box" "{" mins maxs "}"
+
+
+
+
+%import common.WS
+%import common.SIGNED_NUMBER
+%import common.SIGNED_INT
+%import common.CNAME
+%ignore WS
