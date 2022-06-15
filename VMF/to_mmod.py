@@ -1,8 +1,10 @@
 import pprint
 
 def remove_ents(vmf, elems):
+    # print(f"removing {elems=}")
     for e in elems:
-        vmf["entity"].remove(e)
+        if e in vmf["entity"]:
+            vmf["entity"].remove(e)
 
 def get_regens(vmf):
     return get_ents_by_classname(vmf, "func_regenerate") + get_ents_by_classname(vmf, "trigger_hurt")
@@ -99,7 +101,7 @@ def fix_multis(vmf, new_filternames_to_delete):
     for filter_multi in get_ents_by_classname(vmf, "filter_multi"):
         is_and = not filter_multi["kvs"]["filtertype"]
         for num in range(10):
-            filter_str: str = f"Filter{str(num + 1).zfill(2)}"  # Filter01, Filter02... Filter10
+            filter_str: str = f"filter{str(num + 1).zfill(2)}"  # Filter01, Filter02... Filter10
             if filter_multi["kvs"].get(filter_str) in new_filternames_to_delete:
                 if is_and:
                     names_to_delete.append(filter_multi["kvs"]["targetname"])
@@ -108,7 +110,7 @@ def fix_multis(vmf, new_filternames_to_delete):
                 else:
                     del filter_multi["kvs"][filter_str]
 
-        if not is_and and not any([filter_multi["kvs"].get([ f"Filter{str(num + 1).zfill(2)}"] for num in range(10))]):
+        if not is_and and not any([filter_multi["kvs"].get([ f"filter{str(num + 1).zfill(2)}"] for num in range(10))]):
             names_to_delete.append(filter_multi["kvs"]["targetname"])
             ents_to_return_and_delete.append(filter_multi)
     return names_to_delete, ents_to_return_and_delete
@@ -123,15 +125,20 @@ def make_filters_for_classnum(vmf, classnum, safe = False):
             if ent["kvs"]["tfclass"] != classnum and ent["kvs"].get("negated") in (0, "allow entities that match criteria"):
                 names_of_non_class_filters.append(ent["kvs"]["targetname"])
                 ents_to_remove.append(ent)
-            elif ent["kvs"]["tfclass"] == classnum and ent["kvs"].get("negated"):
+            elif ent["kvs"]["tfclass"] == classnum and ent["kvs"].get("negated") not in (0, "allow entities that match criteria"):
                 names_of_non_class_filters.append(ent["kvs"]["targetname"])
                 ents_to_remove.append(ent)
 
 
+    for ent in vmf["entity"]:
+        if ent["kvs"].get("filtername"):
+            if ent["kvs"]["filtername"] in names_of_non_class_filters:
+                ents_to_remove.append(ent)
     pre_l = len(names_of_non_class_filters)
+    m = [[],[]]
     if not safe:
         m = fix_multis(vmf, names_of_non_class_filters)
-    names_of_non_class_filters = []
+    # print(names_of_non_class_filters)
     names_of_non_class_filters += m[0]
     ents_to_remove += m[1]
     l = len(names_of_non_class_filters)
@@ -157,34 +164,34 @@ def make_filters_for_classnum(vmf, classnum, safe = False):
             if ent["kvs"]["filtername"] in names_of_non_class_filters:
                 ents_to_remove.append(ent)
 
+    remove_ents(vmf, ents_to_remove)
 
     names_of_class_filters = []
     for ent in get_ents_by_classname(vmf, "filter_tf_class"):
         if ent["kvs"].get("targetname"):
-            if ent["kvs"]["tfclass"] == 2 and  ent["kvs"].get("negated") in (0, "allow entities that match criteria"):
+            if ent["kvs"]["tfclass"] == classnum and  ent["kvs"].get("negated") in (0, "allow entities that match criteria"):
                 names_of_class_filters.append(ent["kvs"]["targetname"])
                 ents_to_remove.append(ent)
-            elif ent["kvs"]["tfclass"] != 2 and ent["kvs"].get("negated"):
+            elif ent["kvs"]["tfclass"] != classnum and ent["kvs"].get("negated") not in (0, "allow entities that match ctieria"):
                 names_of_class_filters.append(ent["kvs"]["targetname"])
                 ents_to_remove.append(ent)
 
     for ent in vmf["entity"]:
         if ent["kvs"].get("filtername"):
-            # print(ent)
 
             if ent["kvs"]["filtername"] in names_of_class_filters:
                 del ent["kvs"]["filtername"]
+
     pre_l = len(names_of_class_filters)
     if not safe:
         m = fix_multis(vmf, names_of_class_filters)
-    names_of_class_filters = []
     names_of_class_filters += m[0]
     ents_to_remove += m[1]
+    # print(names_of_non_class_filters)
     l = len(names_of_class_filters)
     for ent in vmf["entity"]:
         if ent["kvs"].get("filtername"):
             # print(ent)
-
             if ent["kvs"]["filtername"] in names_of_class_filters:
                 del ent["kvs"]["filtername"]
 
@@ -196,6 +203,7 @@ def make_filters_for_classnum(vmf, classnum, safe = False):
            m = fix_multis(vmf, m[0])
         names_of_class_filters = []
         names_of_class_filters += m[0]
+
         ents_to_remove += m[1]
         l = len(names_of_class_filters)
 
@@ -206,6 +214,7 @@ def make_filters_for_classnum(vmf, classnum, safe = False):
 
         remove_ents(vmf, ents_to_remove)
         ents_to_remove = []
+    remove_ents(vmf, ents_to_remove)
 
 
 
@@ -266,19 +275,21 @@ def change_textures(vmf, texture_changes : list[TextureChange]):
         texture_change.change(vmf)
 
 
-def to_mmod_rj(vmf):
+def to_mmod_by_classnum(vmf, classnum):
     remove_regen(vmf)
-    make_filters_for_classnum(vmf, 2)
+    make_filters_for_classnum(vmf, classnum)
     fix_downards_catapults(vmf)
     change_textures(vmf, get_tool_texture_changes())
     return vmf
+
+
 
 
 if __name__== "__main__":
     vmf: dict
     with open("./transformed_into_py.txt", "r") as f:
         vmf = eval(f.read())
-    fixed = to_mmod_rj(vmf)
+    fixed = to_mmod_by_classnum(vmf, 2)
     # with open("./transformed_into_py_fix.txt", "w") as f:
     #     f.write(fixed.__repr__())
 
