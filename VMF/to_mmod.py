@@ -115,7 +115,7 @@ def fix_multis(vmf, new_filternames_to_delete):
 
 
 
-def make_filters_for_classnum(vmf, classnum):
+def make_filters_for_classnum(vmf, classnum, safe = False):
     names_of_non_class_filters = []
     ents_to_remove = []
     for ent in get_ents_by_classname(vmf, "filter_tf_class"):
@@ -129,7 +129,8 @@ def make_filters_for_classnum(vmf, classnum):
 
 
     pre_l = len(names_of_non_class_filters)
-    m = fix_multis(vmf, names_of_non_class_filters)
+    if not safe:
+        m = fix_multis(vmf, names_of_non_class_filters)
     names_of_non_class_filters = []
     names_of_non_class_filters += m[0]
     ents_to_remove += m[1]
@@ -139,7 +140,8 @@ def make_filters_for_classnum(vmf, classnum):
     ents_to_remove = []
     while pre_l != l:
         pre_l = len(names_of_non_class_filters)
-        m = fix_multis(vmf, m[0])
+        if not safe:
+            m = fix_multis(vmf, m[0])
         names_of_non_class_filters = []
         names_of_non_class_filters += m[0]
         ents_to_remove += m[1]
@@ -173,7 +175,8 @@ def make_filters_for_classnum(vmf, classnum):
             if ent["kvs"]["filtername"] in names_of_class_filters:
                 del ent["kvs"]["filtername"]
     pre_l = len(names_of_class_filters)
-    m = fix_multis(vmf, names_of_class_filters)
+    if not safe:
+        m = fix_multis(vmf, names_of_class_filters)
     names_of_class_filters = []
     names_of_class_filters += m[0]
     ents_to_remove += m[1]
@@ -189,7 +192,8 @@ def make_filters_for_classnum(vmf, classnum):
     ents_to_remove = []
     while pre_l != l:
         pre_l = len(names_of_class_filters)
-        m = fix_multis(vmf, m[0])
+        if not safe:
+           m = fix_multis(vmf, m[0])
         names_of_class_filters = []
         names_of_class_filters += m[0]
         ents_to_remove += m[1]
@@ -219,7 +223,12 @@ class TextureChange:
         self.texture_to = texture_to
         self.classnames = []
         if classnames:
-            self.classnames = classnames
+            if type(classnames) == list:
+                self.classnames = classnames
+            elif type(classnames) == str:
+                self.classnames = [classnames]
+            else:
+                raise Exception("Classnames invalid type: expected list or str")
         self.apply_to_world_solids = world_solids
 
     def change(self, vmf):
@@ -230,29 +239,48 @@ class TextureChange:
                         if sub["kvs"]["material"] == self.texture_from:
                             sub["kvs"]["material"] = self.texture_to
         for classname in self.classnames:
+            # print(classname)
             for c in get_ents_by_classname(vmf, classname):
                 for sub in c["classes"]:
                     if sub["classtype"] == "solid":
                         for s in sub["classes"]:
                             if s["classtype"] == "side":
+                                # print(s["kvs"]["material"])
                                 if s["kvs"]["material"] == self.texture_from:
                                     s["kvs"]["material"] = self.texture_to
 
+
+
+def get_tool_texture_changes():
+    texture_changes = [
+        TextureChange("TOOLS/TOOLSTRIGGER", "TOOLS/TRIGGER_CATAPULT", "trigger_catapult"),
+        TextureChange("TOOLS/TOOLSTRIGGER", "TOOLS/TRIGGER_NOGRENADES", "func_nogrenades"),
+        TextureChange("TOOLS/TOOLSTRIGGER", "TOOLS/TRIGGER_TELEPORT", "trigger_teleport"),
+
+    ]
+    return texture_changes
+
+
+def change_textures(vmf, texture_changes : list[TextureChange]):
+    for texture_change in texture_changes:
+        texture_change.change(vmf)
 
 
 def to_mmod_rj(vmf):
     remove_regen(vmf)
     make_filters_for_classnum(vmf, 2)
     fix_downards_catapults(vmf)
+    change_textures(vmf, get_tool_texture_changes())
     return vmf
+
 
 if __name__== "__main__":
     vmf: dict
     with open("./transformed_into_py.txt", "r") as f:
         vmf = eval(f.read())
     fixed = to_mmod_rj(vmf)
-    with open("./transformed_into_py_fix.txt", "w") as f:
-        f.write(fixed.__repr__())
+    # with open("./transformed_into_py_fix.txt", "w") as f:
+    #     f.write(fixed.__repr__())
 
     # pp = pprint.PrettyPrinter(sort_dicts=False, indent=4, width=140)
     # with open("./transformed_into_py_fix_pretty.txt", "w") as f:
